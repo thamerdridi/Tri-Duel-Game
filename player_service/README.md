@@ -2,14 +2,14 @@
 
 The Player Service manages player profiles, match history, cards, and leaderboards for the Tri-Duel game.
 
-## 🎯 Responsibilities
+## Responsibilities
 
 - Store and serve the 18 game cards
 - Record match results from Game Service
 - Track player profiles and statistics
 - Provide match history and leaderboards
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Local Development (with SQLite)
 
@@ -38,7 +38,7 @@ docker compose up --build
 
 Service will be available at: http://localhost:8000
 
-## 📡 API Endpoints
+## API Endpoints
 
 ### Health Check
 
@@ -96,7 +96,7 @@ Get a specific card by ID.
 
 **`POST /matches`**
 
-⚠️ **Called by Game Service** when a match finishes.
+ **Called by Game Service** when a match finishes.
 
 **Request Body:**
 ```json
@@ -230,14 +230,14 @@ Get player rankings sorted by wins.
 
 ---
 
-## 🔗 Interactive API Documentation
+## Interactive API Documentation
 
 Once the service is running, visit:
 
 - **Swagger UI:** http://localhost:8000/docs
 - **ReDoc:** http://localhost:8000/redoc
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 player_service/
@@ -257,7 +257,7 @@ player_service/
 └── docker-compose.yml
 ```
 
-## 🗄️ Database Schema
+## Database Schema
 
 ### Tables
 
@@ -273,7 +273,7 @@ player_service/
 **`match_rounds`**
 - Individual round data with cards played
 
-## 🔌 Integration with Other Services
+## Integration with Other Services
 
 ### Game Service → Player Service
 
@@ -295,7 +295,7 @@ Frontend fetches data directly:
 - Match history for player profiles
 - Leaderboard for rankings
 
-## 🐳 Docker Configuration
+## Docker Configuration
 
 **Environment Variables:**
 
@@ -303,14 +303,14 @@ Frontend fetches data directly:
 
 **Exposed Port:** `8000`
 
-## 📝 Notes
+## Notes
 
 - Players are automatically created with `username = external_id` when they first appear in a match
 - Card seeding happens automatically on startup (only runs once)
 - All match data is immutable once stored
 - The service doesn't validate game logic—it trusts Game Service results
 
-## 🤝 Team Integration
+## Team Integration
 
 This service is part of the Tri-Duel microservices architecture:
 
