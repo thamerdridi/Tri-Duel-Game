@@ -1,0 +1,14 @@
+
+services:
+  game-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: game-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./game_app:/app/game_app
+    environment:
+      DATABASE_URL: "sqlite:////app/game.db"
+    command: uvicorn game_app.main:app --host 0.0.0.0 --port 8000 --reload
