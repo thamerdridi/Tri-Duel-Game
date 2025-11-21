@@ -44,6 +44,10 @@ def seed_cards() -> None:
 
 @app.on_event("startup")
 def on_startup() -> None:
+    # Skip database initialization during testing
+    import os
+    if os.getenv("TESTING"):
+        return
     # Create tables
     Base.metadata.create_all(bind=engine)
     # Seed deck
