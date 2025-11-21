@@ -104,7 +104,7 @@ paths:
 
   /matches:
     post:
-      summary: Create match record (internal)
+      summary: Create match record (for statistics)
       tags: [Player]
       requestBody:
         required: true
@@ -112,12 +112,40 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - player1_external_id
+                - player2_external_id
+                - player1_score
+                - player2_score
+                - rounds
+                - seed
               properties:
-                match_id:
+                player1_external_id:
                   type: string
-                player1_id:
+                player2_external_id:
                   type: string
-                player2_id:
+                winner_external_id:
+                  type: string
+                  nullable: true
+                player1_score:
+                  type: integer
+                player2_score:
+                  type: integer
+                rounds:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      round_number:
+                        type: integer
+                      player1_card_id:
+                        type: integer
+                      player2_card_id:
+                        type: integer
+                      winner_external_id:
+                        type: string
+                        nullable: true
+                seed:
                   type: string
       responses:
         "201":
@@ -125,10 +153,8 @@ paths:
 
   /players/{id}/matches:
     get:
-      summary: Player match history (protected)
+      summary: Player match history (public)
       tags: [Player]
-      security:
-        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -141,10 +167,8 @@ paths:
 
   /players/{id}/matches/{m_id}:
     get:
-      summary: Get match details (protected)
+      summary: Get match details (public)
       tags: [Player]
-      security:
-        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -155,7 +179,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string
+            type: integer
       responses:
         "200":
           description: Match details
