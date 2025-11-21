@@ -1,0 +1,12 @@
+
+services:
+  game-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: game-service
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: "sqlite:////app/game.db"
+    restart: unless-stopped
