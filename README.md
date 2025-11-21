@@ -2,6 +2,19 @@
 
 A rock-paper-scissors card game with three microservices: Auth, Player, and Game.
 
+## For Evaluators
+
+**IMPORTANT: This application runs 100% in Docker. No dependencies need to be installed on your machine.**
+
+To run and test the complete application:
+
+1. Ensure Docker and Docker Compose are installed
+2. Run: `sudo docker-compose up -d --build`
+3. Wait 30 seconds
+4. Follow the instructions below to test the services
+
+All services, databases, and dependencies are containerized.
+
 ## Architecture
 
 ```
@@ -13,23 +26,37 @@ Auth Service (8001) → JWT tokens → Player Service (8002)
 - **Player**: Profiles, cards, match history, leaderboard  
 - **Game**: Match logic, RPS engine, rounds
 
+## Prerequisites
+
+- Docker
+- Docker Compose
+
+**Note: NO other dependencies needed. Everything runs inside Docker containers.**
+
 ## Running the Architecture
 
-### Step 1: Start Services
+### Step 1: Start All Services (Only Command Needed)
 
 ```bash
-cd /home/thamer/player_service
 sudo docker-compose up -d --build
 ```
 
+This single command will:
+- Build all three Docker images (Auth, Player, Game)
+- Create containers with all dependencies installed
+- Start all services on ports 8001, 8002, 8003
+- Set up networking between services
+
 Wait 30 seconds for services to initialize.
 
-### Step 2: Verify Services Are Running
+### Step 2: Verify Deployment
+
+Manually verify each service:
 
 ```bash
-curl http://localhost:8001/health  # Should return {"status":"ok"}
-curl http://localhost:8002/health  # Should return {"status":"ok"}
-curl http://localhost:8003/        # Should return {"status":"ok"}
+curl http://localhost:8001/health  # Auth Service - Should return {"status":"ok"}
+curl http://localhost:8002/health  # Player Service - Should return {"status":"ok"}
+curl http://localhost:8003/        # Game Service - Should return {"status":"ok"}
 ```
 
 ## Playing a Complete Match
