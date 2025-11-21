@@ -183,19 +183,22 @@ curl http://localhost:8002/leaderboard
 
 **Card System:**
 - 18 cards total: 6 Rock, 6 Paper, 6 Scissors
-- Each category has power levels: 1, 2, 3, 4, 5, 6
+- Power levels vary by category:
+  - Rock: 1, 2, 3, 4, 6, 9
+  - Paper: 1, 2, 3, 5, 7, 9
+  - Scissors: 1, 2, 4, 5, 7, 8
 
 **Winning Logic:**
 1. Rock beats Scissors
 2. Scissors beats Paper
 3. Paper beats Rock
 4. If same category, higher power wins
-
-**Cards are drafted from the same pool (deck)**
+5. If same category and power, draw
 
 **Match Format:**
 - Best of 5 rounds
-- Played untill all 5 rounds complete
+- Each player gets 5 cards from the deck
+- Players alternate playing cards until match ends
 
 ## Service Endpoints
 
