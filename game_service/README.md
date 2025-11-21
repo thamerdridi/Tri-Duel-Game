@@ -1,4 +1,4 @@
-# 🃏 Tri‑Duel Game Service — Backend API
+# Tri‑Duel Game Service — Backend API
 
 ## Table of Contents
 1. **What This Backend Does**
@@ -44,7 +44,7 @@ uvicorn game_app.main:app --reload
 ```
 
 API documentation:  
-👉 http://localhost:8000/docs
+http://localhost:8000/docs
 
 ---
 
@@ -261,7 +261,7 @@ Database is SQLite by default but can be swapped out for PostgreSQL.
 
 ---
 
-# 🎉 You’re Ready to Go!
+# You’re Ready to Go!
 
 Tri‑Duel backend is fully functional and prepared for integration with:
 - **Auth service (JWT)**
