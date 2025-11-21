@@ -1,0 +1,103 @@
+version: "3.9"
+
+services:
+  # ============================================================
+  # AUTH SERVICE - Port 8001
+  # ============================================================
+  auth_service:
+    build:
+      context: ./auth_service
+      dockerfile: Dockerfile
+    container_name: triduel_auth
+    ports:
+      - "8001:8001"
+    environment:
+      # JWT Configuration
+      SECRET_KEY: ${AUTH_SECRET_KEY:-your-super-secret-key-change-in-production}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${TOKEN_EXPIRE_MINUTES:-60}
+      ALGORITHM: "HS256"
+      
+      # Database
+      DATABASE_URL: "sqlite:///./auth.db"
+    volumes:
+      - ./auth_service:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    networks:
+      - triduel_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ============================================================
+  # PLAYER SERVICE - Port 8002
+  # ============================================================
+  player_service:
+    build:
+      context: ./player_service
+      dockerfile: Dockerfile
+    container_name: triduel_player
+    ports:
+      - "8002:8002"
+    environment:
+      # Service URLs
+      AUTH_SERVICE_URL: "http://auth_service:8001"
+      
+      # Database
+      DATABASE_URL: "sqlite:///./players.db"
+    volumes:
+      - ./player_service:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+    depends_on:
+      auth_service:
+        condition: service_healthy
+    networks:
+      - triduel_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ============================================================
+  # GAME SERVICE - Port 8003
+  # ============================================================
+  game_service:
+    build:
+      context: ./game_service
+      dockerfile: Dockerfile
+    container_name: triduel_game
+    ports:
+      - "8003:8003"
+    environment:
+      # Service URLs
+      AUTH_SERVICE_URL: "http://auth_service:8001"
+      PLAYER_SERVICE_URL: "http://player_service:8002"
+      
+      # Database
+      DATABASE_URL: "sqlite:///./game.db"
+    volumes:
+      - ./game_service:/app
+    command: uvicorn game_app.main:app --host 0.0.0.0 --port 8003 --reload
+    depends_on:
+      auth_service:
+        condition: service_healthy
+      player_service:
+        condition: service_healthy
+    networks:
+      - triduel_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  triduel_network:
+    driver: bridge
+
+# For development with SQLite, no volumes needed
+# For production with PostgreSQL, add:
+# volumes:
+#   postgres_data:

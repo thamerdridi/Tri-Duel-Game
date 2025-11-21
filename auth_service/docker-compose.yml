@@ -1,0 +1,79 @@
+version: "3.9"
+
+services:
+  auth_service:
+    build: ./auth_service
+    container_name: auth_service
+    ports:
+      - "8001:8001"
+    environment:
+      # Secrets
+      SECRET_KEY: "supersecretkey"
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      ALGORITHM: "HS256"
+
+      # SQLite (default)
+      DATABASE_URL: "sqlite:///./auth.db"
+
+      # If using PostgreSQL later (uncomment)
+      # DATABASE_URL: "postgresql://auth_user:auth_pass@db:5432/auth_db"
+
+    networks:
+      - tridual_net
+
+  player_service:
+    build: ./player_service
+    container_name: player_service
+    ports:
+      - "8002:8002"
+    environment:
+      AUTH_URL: "http://auth_service:8001/auth/validate"
+      DATABASE_URL: "sqlite:///./players.db"
+
+      # For Postgres (future)
+      # DATABASE_URL: "postgresql://player_user:player_pass@db:5432/player_db"
+
+    depends_on:
+      - auth_service
+    networks:
+      - tridual_net
+
+  game_service:
+    build: ./game_service
+    container_name: game_service
+    ports:
+      - "8003:8003"
+    environment:
+      AUTH_URL: "http://auth_service:8001/auth/validate"
+      PLAYER_URL: "http://player_service:8002"
+      DATABASE_URL: "sqlite:///./game.db"
+
+      # For Postgres (future)
+      # DATABASE_URL: "postgresql://game_user:game_pass@db:5432/game_db"
+
+    depends_on:
+      - auth_service
+      - player_service
+    networks:
+      - tridual_net
+
+  # OPTIONAL: PostgreSQL for production (disabled for now)
+  # db:
+  #   image: postgres:15
+  #   container_name: tridual_db
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: auth_user
+  #     POSTGRES_PASSWORD: auth_pass
+  #     POSTGRES_DB: auth_db
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   networks:
+  #     - tridual_net
+
+networks:
+  tridual_net:
+
+# OPTIONAL if using PostgreSQL:
+# volumes:
+#   pgdata:
