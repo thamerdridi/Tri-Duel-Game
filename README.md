@@ -96,7 +96,7 @@ Note card IDs (1-18). Cards have categories (Rock/Paper/Scissors) and power (10-
 ### Step 4: Start a Match
 
 ```bash
-curl -X POST http://localhost:8003/match/start \
+curl -X POST http://localhost:8003/matches/ \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -105,46 +105,46 @@ curl -X POST http://localhost:8003/match/start \
   }'
 ```
 
-Save the `match_id` from the response.
+Save the `match_id` from the response. Also note the `hand` cards returned - each has a `match_card_id`.
 
 ### Step 5: Play Rounds (Best of 5)
 
+Players take turns playing cards. Use the `match_card_id` from your hand (not the card `id`).
+
 ```bash
-# Round 1
-curl -X POST http://localhost:8003/match/round \
+# Player 1 plays a card
+curl -X POST http://localhost:8003/matches/MATCH_ID_HERE/move \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
-    "match_id": "MATCH_ID_HERE",
-    "player1_card_id": 1,
-    "player2_card_id": 7
+    "player_id": "player1",
+    "match_card_id": 1
   }'
 
-# Round 2
-curl -X POST http://localhost:8003/match/round \
+# Player 2 plays a card (round completes and shows result)
+curl -X POST http://localhost:8003/matches/MATCH_ID_HERE/move \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
-    "match_id": "MATCH_ID_HERE",
-    "player1_card_id": 3,
-    "player2_card_id": 15
+    "player_id": "player2",
+    "match_card_id": 6
   }'
 
-# Continue for rounds 3, 4, 5...
+# Continue alternating until match ends (first to 3 round wins)
 ```
 
 ### Step 6: View Match Results
 
 ```bash
-# Get match details
-curl http://localhost:8003/match/MATCH_ID_HERE \
+# Get match state
+curl "http://localhost:8003/matches/MATCH_ID_HERE?player_id=player1" \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
 
-# View player1's match history
+# View player1's match history (from Player Service)
 curl http://localhost:8002/players/player1/matches \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
 
-# Check leaderboard
+# Check leaderboard (public endpoint)
 curl http://localhost:8002/leaderboard
 ```
 
@@ -188,10 +188,10 @@ GET  /health                       - Health check
 
 ### Game Service (Port 8003)
 ```
-POST /match/start      - Start new match (protected)
-POST /match/round      - Play a round (protected)
-GET  /match/{id}       - Get match state (protected)
-GET  /                 - Health check
+POST /matches/                    - Start new match (protected)
+POST /matches/{id}/move           - Submit a card move (protected)
+GET  /matches/{id}?player_id=...  - Get match state (protected)
+GET  /                            - Health check
 ```
 
 ## Development Commands
