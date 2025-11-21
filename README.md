@@ -138,15 +138,44 @@ curl -X POST http://localhost:8003/matches/MATCH_ID_HERE/move \
 ### Step 6: View Match Results
 
 ```bash
-# Get match state
+# Get match state from Game Service
 curl "http://localhost:8003/matches/MATCH_ID_HERE?player_id=player1" \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
 
-# View player1's match history (from Player Service)
-curl http://localhost:8002/players/player1/matches \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+### Step 7: Record Match in Player Service (for statistics)
 
-# Check leaderboard (public endpoint)
+After a match completes, record it in the Player Service for leaderboard tracking:
+
+```bash
+# Manually submit match result to Player Service
+curl -X POST http://localhost:8002/matches \
+  -H "Content-Type: application/json" \
+  -d '{
+    "player1_external_id": "player1",
+    "player2_external_id": "player2",
+    "winner_external_id": "player1",
+    "player1_score": 3,
+    "player2_score": 2,
+    "rounds": [
+      {
+        "round_number": 1,
+        "player1_card_id": 1,
+        "player2_card_id": 7,
+        "winner_external_id": "player1"
+      }
+    ],
+    "seed": "12345"
+  }'
+```
+
+### Step 8: View Statistics
+
+```bash
+# View player match history
+curl http://localhost:8002/players/player1/matches
+
+# Check global leaderboard (public endpoint)
 curl http://localhost:8002/leaderboard
 ```
 
