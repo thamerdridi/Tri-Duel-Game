@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+sqlalchemy
+python-jose
+email-validator
+passlib[argon2]
+argon2-cffi
+python-dotenv
