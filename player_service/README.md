@@ -71,7 +71,6 @@ Get all 18 Tri-Duel cards.
     "name": "Rock 1",
     "description": null
   },
-  ...
 ]
 ```
 
@@ -286,6 +285,7 @@ response = requests.post(
     "http://player-service:8000/matches",
     json=match_result
 )
+
 ```
 
 ### Frontend → Player Service
