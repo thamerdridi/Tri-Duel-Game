@@ -224,11 +224,10 @@ Interactive Swagger docs:
 
 ## Testing
 
-```bash
-# Run integration tests
-make test
+To run tests, you would need to install Python dependencies locally (not required for Docker deployment):
 
-# Individual service tests
+```bash
+# Individual service tests (optional, requires local Python setup)
 cd auth_service && pytest -v
 cd player_service && pytest -v
 cd game_service && pytest -v
@@ -236,4 +235,4 @@ cd game_service && pytest -v
 
 ---
 
-Quick Links: [Docker Compose](docker-compose.yml) | [Makefile](Makefile) | [Auth Service](auth_service/) | [Player Service](player_service/) | [Game Service](game_service/)
+Quick Links: [Docker Compose](docker-compose.yml) | [Auth Service](auth_service/) | [Player Service](player_service/) | [Game Service](game_service/)
