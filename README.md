@@ -4,9 +4,7 @@ A rock-paper-scissors card game with three microservices: Auth, Player, and Game
 
 Authors: Michal Sachanbinski, Othman Alhammali Shoaib Alhadiri, Thamer DRIDI - (Group 5).
 
-## For Evaluators
-
-**IMPORTANT: This application runs 100% in Docker. No dependencies need to be installed on your machine.**
+## Instructions
 
 To run and test the complete application:
 
