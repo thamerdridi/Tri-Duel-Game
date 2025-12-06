@@ -11,6 +11,7 @@ from game_app.api.schemas import (
     WaitingForOpponentSchema,
     MatchStateResponse,
 )
+from game_app.auth import get_current_user
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
@@ -20,7 +21,17 @@ router = APIRouter(prefix="/matches", tags=["matches"])
 # Create a new match
 # ============================================================
 @router.post("/", response_model=CreateMatchResponse)
-def create_match(data: CreateMatchRequest, db: Session = Depends(get_db)):
+async def create_match(
+    data: CreateMatchRequest,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    # Validate that player1_id matches authenticated user
+    if data.player1_id != user.get("sub"):
+        raise HTTPException(
+            status_code=403,
+            detail="You can only create matches as yourself (player1_id must match your username)"
+        )
 
     service = MatchService(db)
 
@@ -47,11 +58,18 @@ def create_match(data: CreateMatchRequest, db: Session = Depends(get_db)):
     "/{match_id}/move",
     response_model=MoveResultSchema | WaitingForOpponentSchema,
 )
-def submit_move(
+async def submit_move(
     match_id: str,
     data: MoveRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
 ):
+    # Validate that player_id matches authenticated user
+    if data.player_id != user.get("sub"):
+        raise HTTPException(
+            status_code=403,
+            detail="You can only submit moves for yourself"
+        )
 
     service = MatchService(db)
 
@@ -73,11 +91,18 @@ def submit_move(
 # Get complete match state for given player
 # ============================================================
 @router.get("/{match_id}", response_model=MatchStateResponse)
-def get_match_state(
+async def get_match_state(
     match_id: str,
     player_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
 ):
+    # Validate that player_id matches authenticated user
+    if player_id != user.get("sub"):
+        raise HTTPException(
+            status_code=403,
+            detail="You can only view your own match state"
+        )
 
     service = MatchService(db)
 

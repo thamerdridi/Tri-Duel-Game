@@ -1,3 +1,72 @@
+"""
+==========================================
+MATCH SERVICE INTEGRATION TESTS
+==========================================
+
+PURPOSE:
+--------
+Integration tests for MatchService business logic layer.
+These tests verify the service layer behavior directly, bypassing the API layer.
+
+WHAT IS TESTED:
+---------------
+1. Match Creation:
+   - Match object is created with correct initial state
+   - Two players receive equal-sized hands (HAND_SIZE cards each)
+   - Match starts in "in_progress" status
+   - Points start at 0 for both players
+
+2. Move Submission Logic:
+   - First move returns "waiting_for_opponent" status
+   - Second move triggers round resolution
+   - Round winner is determined correctly
+   - Points are updated after each round
+
+3. Match Completion:
+   - Match finishes after MAX_ROUNDS (5) rounds
+   - Match status changes to "finished"
+   - Winner is determined (or None for draw)
+
+4. Move Validation:
+   - Cards cannot be used twice
+   - ValueError is raised for invalid moves
+
+HOW TO RUN:
+-----------
+These tests do NOT require running services (no auth service needed).
+
+Run all integration tests:
+    $ cd game_service
+    $ pytest game_app/tests/integration/ -v
+
+Run specific test:
+    $ pytest game_app/tests/integration/test_match_service.py::test_create_match -v
+
+Run with coverage:
+    $ pytest game_app/tests/integration/ --cov=game_app.services
+
+FIXTURES USED:
+--------------
+- `db_session`: SQLAlchemy database session (in-memory SQLite)
+  - Defined in: game_app/tests/integration/conftest.py
+  - Auto-rolled back after each test
+  - Card definitions are seeded automatically
+
+DIFFERENCE FROM API TESTS:
+---------------------------
+- These tests call MatchService methods DIRECTLY (no HTTP)
+- No authentication layer involved
+- Tests business logic in isolation
+- Faster than API tests (no HTTP overhead)
+
+NOTES:
+------
+- These are INTEGRATION tests - test service + database interaction
+- No external services required
+- Database is reset between tests
+- Tests focus on business logic correctness
+"""
+
 from game_app.services.match_service import MatchService
 from game_app.configs.logic_configs import HAND_SIZE
 import pytest
