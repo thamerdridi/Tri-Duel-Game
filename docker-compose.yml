@@ -2,6 +2,30 @@ version: "3.9"
 
 services:
   # ============================================================
+  # POSTGRESQL DATABASE - WARNING: DEVELOPMENT PASSWORDS - CHANGE IN PRODUCTION IN init-db.sql
+  # ============================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: triduel_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_secret
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - triduel_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================================
   # AUTH SERVICE - Port 8001
   # ============================================================
   auth_service:
@@ -16,7 +40,7 @@ services:
       SECRET_KEY: ${AUTH_SECRET_KEY:-your-super-secret-key-change-in-production}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${TOKEN_EXPIRE_MINUTES:-60}
       ALGORITHM: "HS256"
-      
+
       # Database
       DATABASE_URL: "sqlite:///./auth.db"
     volumes:
@@ -43,14 +67,16 @@ services:
     environment:
       # Service URLs
       AUTH_SERVICE_URL: "http://auth_service:8001"
-      
-      # Database
-      DATABASE_URL: "sqlite:///./players.db"
+
+      # Database - PostgreSQL (shared server, separate database)
+      DATABASE_URL: "postgresql+psycopg2://player_user:player_pass@postgres:5432/triduel_player"
     volumes:
       - ./player_service:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
     depends_on:
       auth_service:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     networks:
       - triduel_network
@@ -74,9 +100,9 @@ services:
       # Service URLs
       AUTH_SERVICE_URL: "http://auth_service:8001"
       PLAYER_SERVICE_URL: "http://player_service:8002"
-      
-      # Database
-      DATABASE_URL: "sqlite:///./game.db"
+
+      # Database - PostgreSQL (shared server, separate database)
+      DATABASE_URL: "postgresql+psycopg2://game_user:game_pass@postgres:5432/triduel_game"
     volumes:
       - ./game_service:/app
     command: uvicorn game_app.main:app --host 0.0.0.0 --port 8003 --reload
@@ -84,6 +110,8 @@ services:
       auth_service:
         condition: service_healthy
       player_service:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     networks:
       - triduel_network
@@ -97,7 +125,6 @@ networks:
   triduel_network:
     driver: bridge
 
-# For development with SQLite, no volumes needed
-# For production with PostgreSQL, add:
-# volumes:
-#   postgres_data:
+volumes:
+  postgres_data:
+    driver: local
