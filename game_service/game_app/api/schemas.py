@@ -89,3 +89,42 @@ class MatchStateResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+# ============================================================
+# CARD DISPLAY (GET /cards endpoints)
+# ============================================================
+class CardDisplaySchema(BaseModel):
+    """
+    Extended card schema with ASCII art visualization.
+    Used for card browsing endpoints.
+    """
+    id: int
+    category: str
+    power: int
+    emoji: str
+    ascii_art: str
+    ascii_compact: str
+    display_text: str
+
+    class Config:
+        orm_mode = True
+
+
+class CardListResponse(BaseModel):
+    """
+    Response for GET /cards - list of all cards with display.
+    """
+    total: int
+    cards: List[CardDisplaySchema]
+    ascii_list: str  # Full ASCII art list view
+
+
+class CardDetailResponse(BaseModel):
+    """
+    Response for GET /cards/{id} - single card detail with full ASCII art.
+    """
+    card: CardDisplaySchema
+    description: str
+    beats: str  # What this card beats
+    loses_to: str  # What beats this card

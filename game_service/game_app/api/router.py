@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from game_app.database.database import get_db
 from game_app.services.match_service import MatchService
+from game_app.services.card_service import CardService
 from game_app.api.schemas import (
     CreateMatchRequest,
     CreateMatchResponse,
@@ -13,19 +15,20 @@ from game_app.api.schemas import (
 )
 from game_app.auth import get_current_user
 
-router = APIRouter(prefix="/matches", tags=["matches"])
+router = APIRouter(tags=["game"])
 
 
 # ============================================================
-# POST /matches
-# Create a new match
+# MATCH ENDPOINTS
 # ============================================================
-@router.post("/", response_model=CreateMatchResponse)
+
+@router.post("/matches", response_model=CreateMatchResponse)
 async def create_match(
     data: CreateMatchRequest,
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user)
 ):
+    """Create a new match between two players."""
     # Validate that player1_id matches authenticated user
     if data.player1_id != user.get("sub"):
         raise HTTPException(
@@ -50,12 +53,8 @@ async def create_match(
     )
 
 
-# ============================================================
-# POST /matches/{match_id}/move
-# Submit move (play a card)
-# ============================================================
 @router.post(
-    "/{match_id}/move",
+    "/matches/{match_id}/move",
     response_model=MoveResultSchema | WaitingForOpponentSchema,
 )
 async def submit_move(
@@ -64,6 +63,7 @@ async def submit_move(
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user)
 ):
+    """Submit a card move in an active match."""
     # Validate that player_id matches authenticated user
     if data.player_id != user.get("sub"):
         raise HTTPException(
@@ -86,17 +86,14 @@ async def submit_move(
     return MoveResultSchema(**result)
 
 
-# ============================================================
-# GET /matches/{match_id}
-# Get complete match state for given player
-# ============================================================
-@router.get("/{match_id}", response_model=MatchStateResponse)
+@router.get("/matches/{match_id}", response_model=MatchStateResponse)
 async def get_match_state(
     match_id: str,
     player_id: str,
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user)
 ):
+    """Get complete match state for a player."""
     # Validate that player_id matches authenticated user
     if player_id != user.get("sub"):
         raise HTTPException(
@@ -114,3 +111,83 @@ async def get_match_state(
         raise HTTPException(status_code=400, detail=str(e))
 
     return MatchStateResponse(**state)
+
+
+# ============================================================
+# CARD ENDPOINTS (PUBLIC - No Auth Required)
+# ============================================================
+
+@router.get("/cards")
+async def list_cards(db: Session = Depends(get_db)):
+    """
+    Get list of all available cards.
+
+    Returns basic card information with image URLs.
+    PUBLIC - no authentication required.
+    """
+    service = CardService(db)
+    cards = service.get_all_cards()
+
+    return {
+        "total": len(cards),
+        "cards": cards
+    }
+
+
+@router.get("/cards/{card_id}")
+async def get_card_detail(card_id: int, db: Session = Depends(get_db)):
+    """
+    Get detailed information about a specific card.
+
+    Returns card data with URLs to images.
+    PUBLIC - no authentication required.
+    """
+    service = CardService(db)
+    card = service.get_card_by_id(card_id)
+
+    if not card:
+        raise HTTPException(status_code=404, detail=f"Card with ID {card_id} not found")
+
+    return card
+
+
+@router.get("/cards/{card_id}/image")
+async def get_card_image(card_id: int, db: Session = Depends(get_db)):
+    """
+    Get card as PNG image (300x420).
+
+    Automatically generates and returns a PNG image of the card.
+    PUBLIC - no authentication required.
+    """
+    service = CardService(db)
+    image_bytes = service.generate_card_image(card_id)
+
+    if not image_bytes:
+        raise HTTPException(status_code=404, detail=f"Card with ID {card_id} not found")
+
+    return StreamingResponse(
+        image_bytes,
+        media_type="image/png",
+        headers={"Content-Disposition": f"inline; filename=card_{card_id}.png"}
+    )
+
+
+@router.get("/cards/{card_id}/thumbnail")
+async def get_card_thumbnail(card_id: int, db: Session = Depends(get_db)):
+    """
+    Get card as small PNG thumbnail (150x210).
+
+    Automatically generates and returns a small PNG thumbnail.
+    PUBLIC - no authentication required.
+    """
+    service = CardService(db)
+    image_bytes = service.generate_card_thumbnail(card_id)
+
+    if not image_bytes:
+        raise HTTPException(status_code=404, detail=f"Card with ID {card_id} not found")
+
+    return StreamingResponse(
+        image_bytes,
+        media_type="image/png",
+        headers={"Content-Disposition": f"inline; filename=card_{card_id}_thumb.png"}
+    )
