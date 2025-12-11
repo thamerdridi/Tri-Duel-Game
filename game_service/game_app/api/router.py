@@ -191,3 +191,26 @@ async def get_card_thumbnail(card_id: int, db: Session = Depends(get_db)):
         media_type="image/png",
         headers={"Content-Disposition": f"inline; filename=card_{card_id}_thumb.png"}
     )
+
+
+@router.get("/cards/cache/stats")
+async def get_cache_stats():
+    """
+    Get cache statistics for card image generation.
+
+    Shows hits, misses, and cache efficiency.
+    Useful for monitoring and optimization.
+
+    PUBLIC - no authentication required.
+    """
+    stats = CardService.get_cache_info()
+
+    # Calculate hit rates
+    for cache_type in ["images", "thumbnails"]:
+        total = stats[cache_type]["hits"] + stats[cache_type]["misses"]
+        if total > 0:
+            stats[cache_type]["hit_rate"] = round(stats[cache_type]["hits"] / total * 100, 2)
+        else:
+            stats[cache_type]["hit_rate"] = 0.0
+
+    return stats
