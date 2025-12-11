@@ -150,61 +150,88 @@ class MatchService:
         }
 
     # ============================================================
-    # GET PLAYER HAND (unused cards)
+    # GET PLAYER CARDS (universal method)
     # ============================================================
-    def get_player_hand(self, match_id: str, player_id: str):
-        cards = (
-            self.db.query(MatchCard)
-            .filter_by(match_id=match_id, player_id=player_id, used=False)
-            .all()
-        )
+    def get_player_cards(self, match_id: str, player_id: str, used_filter=None, format_type="api"):
+        """
+        Universal method to get player cards with flexible filtering and formatting.
 
-        card_defs = self.db.query(CardDefinition).all()
-        defs = {d.id: d for d in card_defs}
+        Args:
+            match_id: Match identifier
+            player_id: Player identifier
+            used_filter: None (all cards), True (only used), False (only available)
+            format_type: "api" (with DOMAIN_CARDS) or "visual" (for SVG rendering)
 
+        Returns:
+            List[Dict]: Cards in requested format
+        """
+        # Build query
+        query = self.db.query(MatchCard).filter_by(match_id=match_id, player_id=player_id)
 
-        return [
-            {
-                "match_card_id": c.id,
-                "card": {
-                    domain_key: getattr(defs[c.card_def_id], db_field)
-                    for domain_key, db_field in DOMAIN_CARDS.items()
-                }
-            }
-            for c in cards
-        ]
+        # Apply used filter if specified
+        if used_filter is not None:
+            query = query.filter_by(used=used_filter)
 
-    # ============================================================
-    # GET USED CARDS FOR ONE PLAYER
-    # ============================================================
-    def get_used_cards_by_player(self, match_id: str, player_id: str):
-        used_cards = (
-            self.db.query(MatchCard)
-            .filter_by(match_id=match_id, player_id=player_id, used=True)
-            .all()
-        )
+        cards = query.all()
 
-        # Load all card definitions
+        # Load card definitions once
         card_defs = self.db.query(CardDefinition).all()
         defs = {d.id: d for d in card_defs}
 
         result = []
-        for c in used_cards:
-            card_def = defs[c.card_def_id]
 
-            # Dynamic domain card fields
-            card_dict = {
-                domain_key: getattr(card_def, db_field)
-                for domain_key, db_field in DOMAIN_CARDS.items()
-            }
+        if format_type == "visual":
+            # Format for SVG rendering (flat structure)
+            for match_card in cards:
+                card_def = defs[match_card.card_def_id]
+                result.append({
+                    "id": card_def.id,
+                    "category": card_def.category,
+                    "power": card_def.power,
+                    "used": match_card.used,
+                    "match_card_id": match_card.id,
+                    "round_used": match_card.round_used if match_card.used else None,
+                })
+            # Sort: available first, then by power descending
+            result.sort(key=lambda x: (x['used'], -x['power']))
 
-            result.append({
-                "match_card_id": c.id,
-                "card": card_dict,
-                "round_used": c.round_used,
-            })
+        else:  # format_type == "api"
+            # Format for API responses (nested structure with DOMAIN_CARDS)
+            for match_card in cards:
+                card_def = defs[match_card.card_def_id]
+
+                card_dict = {
+                    domain_key: getattr(card_def, db_field)
+                    for domain_key, db_field in DOMAIN_CARDS.items()
+                }
+
+                item = {
+                    "match_card_id": match_card.id,
+                    "card": card_dict,
+                }
+
+                # Add round_used for used cards
+                if match_card.used:
+                    item["round_used"] = match_card.round_used
+
+                result.append(item)
 
         return result
+
+    # ============================================================
+    # CONVENIENCE METHODS (wrappers around get_player_cards)
+    # ============================================================
+    def get_player_hand(self, match_id: str, player_id: str):
+        """Get available (unused) cards for API responses."""
+        return self.get_player_cards(match_id, player_id, used_filter=False, format_type="api")
+
+    def get_used_cards_by_player(self, match_id: str, player_id: str):
+        """Get used cards for API responses."""
+        return self.get_player_cards(match_id, player_id, used_filter=True, format_type="api")
+
+    def get_player_hand_with_used_status(self, match_id: str, player_id: str):
+        """Get all cards (used + available) for SVG visualization."""
+        return self.get_player_cards(match_id, player_id, used_filter=None, format_type="visual")
 
     # ============================================================
     # GET COMPLETE MATCH STATE
@@ -229,3 +256,5 @@ class MatchService:
             "opponent_used_cards": self.get_used_cards_by_player(match_id, opponent_id),
             "match_winner": match.winner,
         }
+
+

@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from game_app.database.database import get_db
@@ -114,103 +113,131 @@ async def get_match_state(
 
 
 # ============================================================
-# CARD ENDPOINTS (PUBLIC - No Auth Required)
+# CARD VISUALIZATION ENDPOINTS (PUBLIC - SVG Only)
 # ============================================================
 
-@router.get("/cards")
-async def list_cards(db: Session = Depends(get_db)):
-    """
-    Get list of all available cards.
-
-    Returns basic card information with image URLs.
-    PUBLIC - no authentication required.
-    """
-    service = CardService(db)
-    cards = service.get_all_cards()
-
-    return {
-        "total": len(cards),
-        "cards": cards
-    }
-
-
 @router.get("/cards/{card_id}")
-async def get_card_detail(card_id: int, db: Session = Depends(get_db)):
+async def get_card_detail_svg(card_id: int, db: Session = Depends(get_db)):
     """
-    Get detailed information about a specific card.
+    Get card detail view as SVG (VIEW 2: Card Detail).
 
-    Returns card data with URLs to images.
+    Shows single card with all details:
+    - Category (Rock/Paper/Scissors)
+    - Power level with visual bar
+    - Rarity (Common/Rare/Legendary)
+    - Card ID
+
     PUBLIC - no authentication required.
-    """
-    service = CardService(db)
-    card = service.get_card_by_id(card_id)
 
-    if not card:
+    Usage:
+        - Browser: http://localhost:8003/cards/1
+        - HTML: <img src="http://localhost:8003/cards/1" alt="Card 1"/>
+        - Postman: Direct visualization
+    """
+    from fastapi.responses import Response
+
+    service = CardService(db)
+    svg_content = service.generate_card_svg(card_id)
+
+    if not svg_content:
         raise HTTPException(status_code=404, detail=f"Card with ID {card_id} not found")
 
-    return card
-
-
-@router.get("/cards/{card_id}/image")
-async def get_card_image(card_id: int, db: Session = Depends(get_db)):
-    """
-    Get card as PNG image (300x420).
-
-    Automatically generates and returns a PNG image of the card.
-    PUBLIC - no authentication required.
-    """
-    service = CardService(db)
-    image_bytes = service.generate_card_image(card_id)
-
-    if not image_bytes:
-        raise HTTPException(status_code=404, detail=f"Card with ID {card_id} not found")
-
-    return StreamingResponse(
-        image_bytes,
-        media_type="image/png",
-        headers={"Content-Disposition": f"inline; filename=card_{card_id}.png"}
+    return Response(
+        content=svg_content,
+        media_type="image/svg+xml",
+        headers={
+            "Content-Disposition": f"inline; filename=card_{card_id}.svg",
+            "Cache-Control": "public, max-age=3600"
+        }
     )
 
 
-@router.get("/cards/{card_id}/thumbnail")
-async def get_card_thumbnail(card_id: int, db: Session = Depends(get_db)):
+@router.get("/cards")
+async def get_deck_gallery(db: Session = Depends(get_db)):
     """
-    Get card as small PNG thumbnail (150x210).
+    Get complete deck gallery as SVG (VIEW 1: Deck Gallery).
 
-    Automatically generates and returns a small PNG thumbnail.
+    Shows all available cards in a grid layout with thumbnails.
+    Perfect for browsing all cards in the game.
+
     PUBLIC - no authentication required.
+
+    Usage:
+        - Browser: http://localhost:8003/cards
+        - Displays all cards in organized grid (5 per row)
+        - Shows statistics (Rock/Paper/Scissors count)
+        - All cards with power levels and rarity borders
     """
+    from fastapi.responses import Response
+
     service = CardService(db)
-    image_bytes = service.generate_card_thumbnail(card_id)
+    svg_content = service.generate_deck_gallery_svg()
 
-    if not image_bytes:
-        raise HTTPException(status_code=404, detail=f"Card with ID {card_id} not found")
-
-    return StreamingResponse(
-        image_bytes,
-        media_type="image/png",
-        headers={"Content-Disposition": f"inline; filename=card_{card_id}_thumb.png"}
+    return Response(
+        content=svg_content,
+        media_type="image/svg+xml",
+        headers={
+            "Content-Disposition": "inline; filename=deck_gallery.svg",
+            "Cache-Control": "public, max-age=3600"
+        }
     )
 
 
-@router.get("/cards/cache/stats")
-async def get_cache_stats():
+@router.get("/matches/{match_id}/hand")
+async def get_player_hand_visual(
+    match_id: str,
+    player_id: str,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
     """
-    Get cache statistics for card image generation.
+    Get player's hand visualization as SVG (VIEW 3: Player Hand).
 
-    Shows hits, misses, and cache efficiency.
-    Useful for monitoring and optimization.
+    Shows player's cards in a match with visual distinction:
+    - Available cards (can be played) - shown in color
+    - Used cards (already played) - shown in grayscale with red X
 
-    PUBLIC - no authentication required.
+    AUTHENTICATED - player can only view their own hand.
+
+    Args:
+        match_id: Match identifier
+        player_id: Player identifier (must match authenticated user)
+
+    Returns:
+        SVG visualization of player's hand
+
+    Usage:
+        - Browser: http://localhost:8003/matches/{match_id}/hand?player_id={player_id}
+        - Shows available and used cards separately
+        - Used cards are grayed out and marked
     """
-    stats = CardService.get_cache_info()
+    from fastapi.responses import Response
+    from game_app.utils.card_deck_svg import generate_player_hand_svg
 
-    # Calculate hit rates
-    for cache_type in ["images", "thumbnails"]:
-        total = stats[cache_type]["hits"] + stats[cache_type]["misses"]
-        if total > 0:
-            stats[cache_type]["hit_rate"] = round(stats[cache_type]["hits"] / total * 100, 2)
-        else:
-            stats[cache_type]["hit_rate"] = 0.0
+    # Validate that player_id matches authenticated user
+    if player_id != user.get("sub"):
+        raise HTTPException(
+            status_code=403,
+            detail="You can only view your own hand"
+        )
 
-    return stats
+    match_service = MatchService(db)
+
+    # Get cards with used status
+    try:
+        cards = match_service.get_player_hand_with_used_status(match_id, player_id)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Match or player not found: {str(e)}")
+
+    # Generate SVG
+    svg_content = generate_player_hand_svg(cards, match_id)
+
+    return Response(
+        content=svg_content,
+        media_type="image/svg+xml",
+        headers={
+            "Content-Disposition": f"inline; filename=hand_{match_id}.svg",
+            "Cache-Control": "no-cache"  # Hand changes during match
+        }
+    )
+
