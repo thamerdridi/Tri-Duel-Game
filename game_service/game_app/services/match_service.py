@@ -1,5 +1,7 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+import logging
+import asyncio
 
 from game_app.configs.cards_config import DOMAIN_CARDS
 from game_app.database.models import Match, MatchCard, CardDefinition
@@ -7,6 +9,9 @@ from game_app.configs.logic_configs import MAX_ROUNDS
 from game_app.logic.models import Card
 from game_app.logic.rps import rps_outcome
 from game_app.logic.deck import build_deck, deal_two_hands
+from game_app.clients.player_client import player_client
+
+logger = logging.getLogger(__name__)
 
 
 class MatchService:
@@ -138,6 +143,29 @@ class MatchService:
 
         self.db.commit()
         self.db.refresh(match)
+
+        # Finalize match if finished - notify player_service
+        if match.status == "finished":
+            logger.info(f"🏁 Match {match.id} finished! Triggering finalization callback...")
+            try:
+                # Create async task for finalization (non-blocking)
+                asyncio.create_task(
+                    player_client.finalize_match(
+                        match_id=match.id,
+                        player1_id=match.player1_id,
+                        player2_id=match.player2_id,
+                        winner_id=match.winner,
+                        points_p1=match.points_p1,
+                        points_p2=match.points_p2,
+                        status=match.status
+                    )
+                )
+            except RuntimeError:
+                # If no event loop (sync context), log warning
+                logger.warning(
+                    f"⚠️ Cannot create async task for match {match.id} finalization. "
+                    f"Running in sync context - player stats may not be updated!"
+                )
 
         return {
             "round": match.current_round - 1,

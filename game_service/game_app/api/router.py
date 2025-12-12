@@ -12,7 +12,7 @@ from game_app.api.schemas import (
     WaitingForOpponentSchema,
     MatchStateResponse,
 )
-from game_app.auth import get_current_user
+from game_app.clients.auth_client import get_current_user
 
 router = APIRouter(tags=["game"])
 
