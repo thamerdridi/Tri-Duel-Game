@@ -1,26 +1,36 @@
 from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator
+from game_app.configs.validation_config import (
+    MIN_CARD_POWER,
+    MAX_CARD_POWER,
+    MIN_CARD_ID,
+    MAX_CARD_ID,
+    MIN_PLAYER_ID_LENGTH,
+    MAX_PLAYER_ID_LENGTH,
+    MAX_ROUNDS,
+    HAND_SIZE,
+)
 
 
 # ============================================================
 # BASIC TYPES (Domain -> API)
 # ============================================================
 class CardSchema(BaseModel):
-    id: int = Field(ge=1, description="Card definition ID")
+    id: int = Field(ge=MIN_CARD_ID, description="Card definition ID")
     category: str = Field(
         pattern=r'^(rock|paper|scissors)$',
         description="Card category (RPS)",
         examples=["rock", "paper", "scissors"]
     )
     power: int = Field(
-        ge=10,
-        le=60,
+        ge=MIN_CARD_POWER,
+        le=MAX_CARD_POWER,
         description="Card power level",
-        examples=[10, 30, 60]
+        examples=[1, 3, 6]
     )
 
 class HandCardSchema(BaseModel):
-    match_card_id: int = Field(ge=1, description="Match card instance ID")
+    match_card_id: int = Field(ge=MIN_CARD_ID, description="Match card instance ID")
     card: CardSchema
 
 
@@ -33,15 +43,15 @@ class PlayerHandSchema(BaseModel):
 # ============================================================
 class CreateMatchRequest(BaseModel):
     player1_id: str = Field(
-        min_length=1,
-        max_length=100,
+        min_length=MIN_PLAYER_ID_LENGTH,
+        max_length=MAX_PLAYER_ID_LENGTH,
         pattern=r'^[a-zA-Z0-9_-]+$',
         description="Username (alphanumeric, underscore, hyphen)",
         examples=["alice", "player_123", "bob-2024"]
     )
     player2_id: str = Field(
-        min_length=1,
-        max_length=100,
+        min_length=MIN_PLAYER_ID_LENGTH,
+        max_length=MAX_PLAYER_ID_LENGTH,
         pattern=r'^[a-zA-Z0-9_-]+$',
         description="Opponent username",
         examples=["bob", "player_456"]
@@ -73,14 +83,14 @@ class CreateMatchResponse(BaseModel):
 # ============================================================
 class MoveRequest(BaseModel):
     match_card_id: int = Field(
-        ge=1,
-        le=100000,
+        ge=MIN_CARD_ID,
+        le=MAX_CARD_ID,
         description="ID of card to play from hand",
         examples=[1, 42, 99]
     )
     player_id: str = Field(
-        min_length=1,
-        max_length=100,
+        min_length=MIN_PLAYER_ID_LENGTH,
+        max_length=MAX_PLAYER_ID_LENGTH,
         pattern=r'^[a-zA-Z0-9_-]+$',
         description="Player making the move",
         examples=["alice", "bob"]
@@ -112,8 +122,8 @@ class PlayedCardSchema(BaseModel):
     card: CardSchema
     round_used: int = Field(
         ge=1,
-        le=5,
-        description="Round number when card was played (1-5)"
+        le=MAX_ROUNDS,
+        description=f"Round number when card was played (1-{MAX_ROUNDS})"
     )
 
 class MatchStateResponse(BaseModel):

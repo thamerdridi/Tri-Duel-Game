@@ -107,7 +107,7 @@ def test_create_match_with_expired_token(client_no_auth):
     async def mock_reject_token(authorization: str = None):
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    from game_app.auth import get_current_user
+    from game_app.clients.auth_client import get_current_user
     app.dependency_overrides[get_current_user] = mock_reject_token
 
     response = client_no_auth.post(
@@ -121,6 +121,9 @@ def test_create_match_with_expired_token(client_no_auth):
     
     assert response.status_code == 401
     assert "Invalid or expired token" in response.json()["detail"]
+
+    # Clean up override
+    app.dependency_overrides.clear()
 
 
 def test_create_match_when_auth_service_unavailable(client_no_auth):
