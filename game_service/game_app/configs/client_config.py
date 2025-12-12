@@ -57,10 +57,7 @@ AUTH_ENDPOINTS = {
 
 # Player Service Endpoints
 PLAYER_ENDPOINTS = {
-    "finalize_match": "/matches/finalize",
+    "finalize_match": "/matches",  # Changed from /matches/finalize to use existing Player Service endpoint
     "get_player": "/players/{player_id}",
     "update_stats": "/players/{player_id}/stats",
 }
-
-
-

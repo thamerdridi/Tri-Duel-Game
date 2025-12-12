@@ -90,15 +90,15 @@ async def test_finalize_success_first_try():
     Test successful match finalization on first attempt.
 
     Scenario:
-    - Player Service responds with 200 OK immediately
+    - Player Service responds with 201 Created immediately
     - No retries needed
     - Returns True
     """
     client = PlayerClient()
 
-    # Mock successful response
+    # Mock successful response (Player Service returns 201 for POST /matches)
     mock_response = MagicMock()
-    mock_response.status_code = 200
+    mock_response.status_code = 201
 
     with patch('httpx.AsyncClient') as mock_client_class:
         mock_client = AsyncMock()
@@ -122,11 +122,18 @@ async def test_finalize_success_first_try():
         assert result is True
         assert mock_client.post.call_count == 1
 
-        # Verify payload
+        # Verify payload uses Player Service schema format
         call_args = mock_client.post.call_args
-        assert call_args[1]['json']['match_id'] == "test-match-123"
-        assert call_args[1]['json']['player1_id'] == "alice"
-        assert call_args[1]['json']['winner_id'] == "alice"
+        payload = call_args[1]['json']
+
+        # New format - Player Service schema
+        assert payload['player1_external_id'] == "alice"
+        assert payload['player2_external_id'] == "bob"
+        assert payload['winner_external_id'] == "alice"
+        assert payload['player1_score'] == 3
+        assert payload['player2_score'] == 2
+        assert payload['rounds'] is None
+        assert payload['seed'] == "test-match-123"
 
 
 # ============================================================
@@ -140,17 +147,17 @@ async def test_finalize_retry_on_500_error():
 
     Scenario:
     - First 2 attempts: 500 error
-    - Third attempt: 200 OK
+    - Third attempt: 201 Created
     - Should retry and eventually succeed
     """
     client = PlayerClient()
 
-    # Mock responses: 500, 500, 200
+    # Mock responses: 500, 500, 201
     mock_response_error = MagicMock()
     mock_response_error.status_code = 500
 
     mock_response_success = MagicMock()
-    mock_response_success.status_code = 200
+    mock_response_success.status_code = 201  # Changed from 200 to 201
 
     with patch('httpx.AsyncClient') as mock_client_class, \
          patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
@@ -233,13 +240,13 @@ async def test_finalize_retry_on_timeout():
 
     Scenario:
     - First 2 attempts: TimeoutException
-    - Third attempt: 200 OK
+    - Third attempt: 201 Created
     - Should handle timeouts gracefully and retry
     """
     client = PlayerClient()
 
     mock_response_success = MagicMock()
-    mock_response_success.status_code = 200
+    mock_response_success.status_code = 201  # Changed from 200 to 201
 
     with patch('httpx.AsyncClient') as mock_client_class, \
          patch('asyncio.sleep', new_callable=AsyncMock):
@@ -391,12 +398,12 @@ async def test_finalize_sends_correct_payload():
     Verifies:
     - Correct endpoint URL
     - All required fields in JSON payload
-    - Proper match data formatting
+    - Proper match data formatting (Player Service schema)
     """
     client = PlayerClient()
 
     mock_response = MagicMock()
-    mock_response.status_code = 200
+    mock_response.status_code = 201  # Changed from 200 to 201
 
     with patch('httpx.AsyncClient') as mock_client_class:
         mock_client = AsyncMock()
@@ -423,15 +430,15 @@ async def test_finalize_sends_correct_payload():
         expected_endpoint = f"{PLAYER_SERVICE_URL}{PLAYER_ENDPOINTS['finalize_match']}"
         assert call_args[0][0] == expected_endpoint
 
-        # Verify payload structure
+        # Verify payload structure - NEW FORMAT (Player Service schema)
         payload = call_args[1]['json']
-        assert payload['match_id'] == "match-999"
-        assert payload['player1_id'] == "player_one"
-        assert payload['player2_id'] == "player_two"
-        assert payload['winner_id'] == "player_one"
-        assert payload['points_p1'] == 5
-        assert payload['points_p2'] == 0
-        assert payload['status'] == "finished"
+        assert payload['player1_external_id'] == "player_one"
+        assert payload['player2_external_id'] == "player_two"
+        assert payload['winner_external_id'] == "player_one"
+        assert payload['player1_score'] == 5
+        assert payload['player2_score'] == 0
+        assert payload['rounds'] is None
+        assert payload['seed'] == "match-999"
 
 
 @pytest.mark.asyncio
@@ -440,14 +447,14 @@ async def test_finalize_with_draw_result():
     Test finalize_match with draw (no winner).
 
     Verifies:
-    - winner_id can be None
+    - winner_external_id can be None
     - Equal points for both players
     - Draw is properly communicated to Player Service
     """
     client = PlayerClient()
 
     mock_response = MagicMock()
-    mock_response.status_code = 200
+    mock_response.status_code = 201  # Changed from 200 to 201
 
     with patch('httpx.AsyncClient') as mock_client_class:
         mock_client = AsyncMock()
@@ -469,10 +476,10 @@ async def test_finalize_with_draw_result():
 
         assert result is True
 
-        # Verify None winner_id is sent
+        # Verify None winner_external_id is sent (NEW FORMAT)
         payload = mock_client.post.call_args[1]['json']
-        assert payload['winner_id'] is None
-        assert payload['points_p1'] == payload['points_p2']
+        assert payload['winner_external_id'] is None
+        assert payload['player1_score'] == payload['player2_score']
 
 
 # ============================================================

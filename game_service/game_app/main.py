@@ -16,10 +16,10 @@ app = FastAPI(
     * 🃏 Create and manage matches
     * 🎯 Submit moves and resolve rounds
     * 🪨📄✂️ Rock-Paper-Scissors card mechanics
-    * 🎨 Beautiful ASCII art card display
+    * 🎨 Beautiful SVG card display
     
     ## Card Display
-    Use `/cards` endpoints to view all available cards with ASCII art visualization.
+    Use `/cards` endpoints to view all available cards with SVG visualization.
     No authentication required for viewing cards!
     
     ## Authentication

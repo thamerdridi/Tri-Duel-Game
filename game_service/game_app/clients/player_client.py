@@ -17,6 +17,7 @@ from game_app.configs.client_config import (
     RETRY_BACKOFF_BASE,
     MAX_RETRY_WAIT,
 )
+from game_app.clients.schemas import PlayerServiceMatchFinalize
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ class PlayerClient:
         Notify player service about finished match.
 
         Sends match result to player service so it can update player statistics.
+        Uses existing Player Service POST /matches endpoint.
         Implements exponential backoff retry pattern.
 
         Args:
@@ -63,15 +65,16 @@ class PlayerClient:
         """
         endpoint = f"{self.base_url}{PLAYER_ENDPOINTS['finalize_match']}"
 
-        payload = {
-            "match_id": match_id,
-            "player1_id": player1_id,
-            "player2_id": player2_id,
-            "winner_id": winner_id,
-            "points_p1": points_p1,
-            "points_p2": points_p2,
-            "status": status,
-        }
+        # Use Pydantic schema to prevent JSON hell and ensure type safety
+        payload_schema = PlayerServiceMatchFinalize(
+            player1_external_id=player1_id,
+            player2_external_id=player2_id,
+            winner_external_id=winner_id,
+            player1_score=points_p1,
+            player2_score=points_p2,
+            rounds=[],  # Temporary - will be removed by Player Service team
+            seed=match_id,
+        )
 
         logger.info(f"🎯 Finalizing match {match_id}: winner={winner_id}")
 
@@ -80,10 +83,11 @@ class PlayerClient:
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
                     response = await client.post(
                         endpoint,
-                        json=payload
+                        json=payload_schema.model_dump()  # Pydantic v2 (or .dict() for v1)
                     )
 
-                    if response.status_code == 200:
+                    # Player Service returns 201 for POST /matches
+                    if response.status_code == 201:
                         logger.info(f"✅ Match {match_id} finalized successfully")
                         return True
                     else:
@@ -124,7 +128,7 @@ class PlayerClient:
 
     async def get_player(self, player_id: str) -> Optional[Dict[str, Any]]:
         """
-        Get player information from player service.
+        Get player information from player service. - currently not in use
 
         Args:
             player_id: Player username
@@ -132,7 +136,7 @@ class PlayerClient:
         Returns:
             dict: Player information or None if not found
         """
-        endpoint = f"{self.base_url}{PLAYER_ENDPOINTS['get_player']}".format(player_id=player_id)
+        endpoint = f"{self.base_url}/players/{player_id}"
 
         logger.debug(f"👤 Fetching player info for {player_id}")
 
@@ -156,4 +160,3 @@ class PlayerClient:
 
 # Global client instance
 player_client = PlayerClient()
-

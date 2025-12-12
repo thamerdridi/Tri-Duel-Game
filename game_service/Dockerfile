@@ -16,6 +16,14 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 # Copy application code
 COPY game_app /app/game_app
 
+# Create non-root user for security
+RUN addgroup --system --gid 1000 gameuser && \
+    adduser --system --uid 1000 --gid 1000 --no-create-home gameuser && \
+    chown -R gameuser:gameuser /app
+
+# Switch to non-root user
+USER gameuser
+
 # Expose port
 EXPOSE 8003
 
