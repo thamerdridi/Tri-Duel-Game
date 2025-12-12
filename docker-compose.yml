@@ -1,28 +1,32 @@
 version: "3.9"
 
 services:
+
   # ============================================================
-  # POSTGRESQL DATABASE - WARNING: DEVELOPMENT PASSWORDS - CHANGE IN PRODUCTION IN init-db.sql
+  # POSTGRESQL DATABASE (SIDECAR) - Game Service Only
+  # Dedicated database instance for Game Service (zero latency)
+  # Connected via isolated network (game_internal)
+  # Designed to be kept on the same local storage as game_service (ex. one 'Pod' in Kubernetes)
   # ============================================================
-  postgres:
+  game_postgres:
     image: postgres:15-alpine
-    container_name: triduel_postgres
+    container_name: game_postgres
+    env_file:
+      - ./game_service/.secrets.example  # Load secrets from game_service folder - for dev use .example
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_secret
-      POSTGRES_DB: postgres
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${GAME_DB_USER}
+      POSTGRES_PASSWORD: ${GAME_DB_PASSWORD}
+      POSTGRES_DB: ${GAME_DB_NAME}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+      - game_postgres_data:/var/lib/postgresql/data
     networks:
-      - triduel_network
+      - game_internal  # Isolated network for Game Service only
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U ${GAME_DB_USER} -d ${GAME_DB_NAME}" ]
       interval: 5s
       timeout: 5s
       retries: 5
+
     restart: unless-stopped
 
   # ============================================================
@@ -68,15 +72,13 @@ services:
       # Service URLs
       AUTH_SERVICE_URL: "http://auth_service:8001"
 
-      # Database - PostgreSQL (shared server, separate database)
-      DATABASE_URL: "postgresql+psycopg2://player_user:player_pass@postgres:5432/triduel_player"
+      # Database - SQLite (local file for simplicity)
+      DATABASE_URL: "sqlite:///./players.db"
     volumes:
       - ./player_service:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
     depends_on:
       auth_service:
-        condition: service_healthy
-      postgres:
         condition: service_healthy
     networks:
       - triduel_network
@@ -88,6 +90,10 @@ services:
 
   # ============================================================
   # GAME SERVICE - Port 8003
+  # Uses dedicated PostgreSQL sidecar (game_postgres) for minimal latency
+  # Connected to both:
+  #   - triduel_network (for Auth/Player communication)
+  #   - game_internal (for isolated PostgreSQL access)
   # ============================================================
   game_service:
     build:
@@ -101,8 +107,12 @@ services:
       AUTH_SERVICE_URL: "http://auth_service:8001"
       PLAYER_SERVICE_URL: "http://player_service:8002"
 
-      # Database - PostgreSQL (shared server, separate database)
-      DATABASE_URL: "postgresql+psycopg2://game_user:game_pass@postgres:5432/triduel_game"
+      # Database - Dedicated PostgreSQL sidecar (from .env)
+      DATABASE_URL: "postgresql+psycopg2://${GAME_DB_USER}:${GAME_DB_PASSWORD}@game_postgres:5432/${GAME_DB_NAME}"
+
+    env_file:
+      - ./game_service/.secrets.example  # Load secrets from game_service folder - for dev use .example
+
     volumes:
       - ./game_service:/app
     command: uvicorn game_app.main:app --host 0.0.0.0 --port 8003 --reload
@@ -111,10 +121,11 @@ services:
         condition: service_healthy
       player_service:
         condition: service_healthy
-      postgres:
+      game_postgres:
         condition: service_healthy
     networks:
-      - triduel_network
+      - triduel_network  # Main network (for inter-service communication)
+      - game_internal    # Isolated network (for PostgreSQL access)
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 10s
@@ -124,7 +135,15 @@ services:
 networks:
   triduel_network:
     driver: bridge
+    name: triduel_network
+
+  # Isolated network for Game Service <-> PostgreSQL sidecar
+  # Only game_service and game_postgres have access
+  game_internal:
+    driver: bridge
+    name: game_internal
+    internal: true  # false = allows internet access (for pip install, apt-get)
 
 volumes:
-  postgres_data:
+  game_postgres_data:
     driver: local
