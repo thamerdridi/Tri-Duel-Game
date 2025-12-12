@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+import logging
 
 from game_app.database.database import get_db
 from game_app.services.match_service import MatchService
@@ -13,7 +14,9 @@ from game_app.api.schemas import (
     MatchStateResponse,
 )
 from game_app.clients.auth_client import get_current_user
+from game_app.configs.logging_config import log_if_enabled
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["game"])
 
 
@@ -30,6 +33,13 @@ async def create_match(
     """Create a new match between two players."""
     # Validate that player1_id matches authenticated user
     if data.player1_id != user.get("sub"):
+        # Security logging: Unauthorized match creation attempt
+        log_if_enabled(
+            logger,
+            "warning",
+            f"⚠️ UNAUTHORIZED_ATTEMPT | action=create_match | "
+            f"user={user.get('sub')} | attempted_as={data.player1_id}"
+        )
         raise HTTPException(
             status_code=403,
             detail="You can only create matches as yourself (player1_id must match your username)"
@@ -65,6 +75,13 @@ async def submit_move(
     """Submit a card move in an active match."""
     # Validate that player_id matches authenticated user
     if data.player_id != user.get("sub"):
+        # Security logging: Unauthorized move attempt
+        log_if_enabled(
+            logger,
+            "warning",
+            f"⚠️ UNAUTHORIZED_ATTEMPT | action=submit_move | "
+            f"user={user.get('sub')} | attempted_as={data.player_id} | match_id={match_id}"
+        )
         raise HTTPException(
             status_code=403,
             detail="You can only submit moves for yourself"
@@ -95,6 +112,13 @@ async def get_match_state(
     """Get complete match state for a player."""
     # Validate that player_id matches authenticated user
     if player_id != user.get("sub"):
+        # Security logging: Unauthorized match state access
+        log_if_enabled(
+            logger,
+            "warning",
+            f"⚠️ UNAUTHORIZED_ATTEMPT | action=view_match_state | "
+            f"user={user.get('sub')} | attempted_as={player_id} | match_id={match_id}"
+        )
         raise HTTPException(
             status_code=403,
             detail="You can only view your own match state"

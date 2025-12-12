@@ -6,6 +6,7 @@ import asyncio
 from game_app.configs.cards_config import DOMAIN_CARDS
 from game_app.database.models import Match, MatchCard, CardDefinition
 from game_app.configs.logic_configs import MAX_ROUNDS
+from game_app.configs.logging_config import log_if_enabled
 from game_app.logic.models import Card
 from game_app.logic.rps import rps_outcome
 from game_app.logic.deck import build_deck, deal_two_hands
@@ -53,6 +54,15 @@ class MatchService:
 
         self.db.commit()
         self.db.refresh(match)
+
+        # Security logging: Match creation
+        log_if_enabled(
+            logger,
+            "info",
+            f"✅ MATCH_CREATED | match_id={match.id} | "
+            f"player1={player1_id} | player2={player2_id} | status={match.status}"
+        )
+
         return match
 
     def _save_match_card(self, match_id, player_id, card: Card):
@@ -71,9 +81,19 @@ class MatchService:
     def submit_move(self, match_id: str, player_id: str, match_card_id: int):
         match = self.db.query(Match).filter_by(id=match_id).first()
         if not match:
+            log_if_enabled(
+                logger,
+                "warning",
+                f"❌ INVALID_MOVE | match_id={match_id} not found | player={player_id}"
+            )
             raise ValueError("Match not found")
 
         if match.status != "in_progress":
+            log_if_enabled(
+                logger,
+                "warning",
+                f"❌ INVALID_MOVE | match_id={match_id} already finished | player={player_id}"
+            )
             raise ValueError("Match already finished")
 
         card = (
@@ -83,13 +103,33 @@ class MatchService:
         )
 
         if not card:
+            log_if_enabled(
+                logger,
+                "warning",
+                f"❌ INVALID_MOVE | invalid card_id={match_card_id} | "
+                f"match_id={match_id} | player={player_id}"
+            )
             raise ValueError("Invalid card or player")
         if card.used:
+            log_if_enabled(
+                logger,
+                "warning",
+                f"❌ INVALID_MOVE | card_id={match_card_id} already used | "
+                f"match_id={match_id} | player={player_id}"
+            )
             raise ValueError("Card already used")
 
         card.used = True
         card.round_used = match.current_round
         self.db.commit()
+
+        # Security logging: Move submitted
+        log_if_enabled(
+            logger,
+            "info",
+            f"🎯 MOVE_SUBMITTED | match_id={match_id} | player={player_id} | "
+            f"card_id={match_card_id} | round={match.current_round}"
+        )
 
         other_card = (
             self.db.query(MatchCard)
@@ -132,6 +172,15 @@ class MatchService:
 
         match.current_round += 1
 
+        # Security logging: Round resolved
+        log_if_enabled(
+            logger,
+            "info",
+            f"⚔️ ROUND_RESOLVED | match_id={match.id} | round={match.current_round - 1} | "
+            f"winner={result.winner if result.winner else 'DRAW'} | "
+            f"score={match.points_p1}-{match.points_p2}"
+        )
+
         if match.current_round > MAX_ROUNDS:
             match.status = "finished"
             if match.points_p1 > match.points_p2:
@@ -146,7 +195,15 @@ class MatchService:
 
         # Finalize match if finished - notify player_service
         if match.status == "finished":
-            logger.info(f"🏁 Match {match.id} finished! Triggering finalization callback...")
+            # Security logging: Match finished
+            log_if_enabled(
+                logger,
+                "info",
+                f"🏁 MATCH_FINISHED | match_id={match.id} | "
+                f"winner={match.winner if match.winner else 'DRAW'} | "
+                f"final_score={match.points_p1}-{match.points_p2} | "
+                f"players={match.player1_id}_vs_{match.player2_id}"
+            )
             try:
                 # Create async task for finalization (non-blocking)
                 asyncio.create_task(

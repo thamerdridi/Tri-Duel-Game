@@ -61,14 +61,3 @@ PLAYER_ENDPOINTS = {
     "get_player": "/players/{player_id}",
     "update_stats": "/players/{player_id}/stats",
 }
-
-# ============================================================
-# LOGGING
-# ============================================================
-
-# Log level for HTTP client operations
-CLIENT_LOG_LEVEL = os.getenv("CLIENT_LOG_LEVEL", "INFO")
-
-# Enable detailed request/response logging
-ENABLE_REQUEST_LOGGING = os.getenv("ENABLE_REQUEST_LOGGING", False)
-

@@ -1,17 +1,26 @@
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 # ============================================================
 # BASIC TYPES (Domain -> API)
 # ============================================================
 class CardSchema(BaseModel):
-    id: int
-    category: str
-    power: int
+    id: int = Field(ge=1, description="Card definition ID")
+    category: str = Field(
+        pattern=r'^(rock|paper|scissors)$',
+        description="Card category (RPS)",
+        examples=["rock", "paper", "scissors"]
+    )
+    power: int = Field(
+        ge=10,
+        le=60,
+        description="Card power level",
+        examples=[10, 30, 60]
+    )
 
 class HandCardSchema(BaseModel):
-    match_card_id: int
+    match_card_id: int = Field(ge=1, description="Match card instance ID")
     card: CardSchema
 
 
@@ -23,8 +32,29 @@ class PlayerHandSchema(BaseModel):
 # CREATE MATCH
 # ============================================================
 class CreateMatchRequest(BaseModel):
-    player1_id: str
-    player2_id: str
+    player1_id: str = Field(
+        min_length=1,
+        max_length=100,
+        pattern=r'^[a-zA-Z0-9_-]+$',
+        description="Username (alphanumeric, underscore, hyphen)",
+        examples=["alice", "player_123", "bob-2024"]
+    )
+    player2_id: str = Field(
+        min_length=1,
+        max_length=100,
+        pattern=r'^[a-zA-Z0-9_-]+$',
+        description="Opponent username",
+        examples=["bob", "player_456"]
+    )
+
+    @field_validator('player2_id')
+    @classmethod
+    def validate_not_same_player(cls, v, info):
+        """Ensure players are different."""
+        player1 = info.data.get('player1_id')
+        if player1 and v == player1:
+            raise ValueError("Cannot play against yourself")
+        return v
 
 
 class CreateMatchResponse(BaseModel):
@@ -42,8 +72,19 @@ class CreateMatchResponse(BaseModel):
 # SUBMIT MOVE
 # ============================================================
 class MoveRequest(BaseModel):
-    match_card_id: int
-    player_id: str
+    match_card_id: int = Field(
+        ge=1,
+        le=100000,
+        description="ID of card to play from hand",
+        examples=[1, 42, 99]
+    )
+    player_id: str = Field(
+        min_length=1,
+        max_length=100,
+        pattern=r'^[a-zA-Z0-9_-]+$',
+        description="Player making the move",
+        examples=["alice", "bob"]
+    )
 
 
 
@@ -69,11 +110,11 @@ class WaitingForOpponentSchema(BaseModel):
 # ============================================================
 class PlayedCardSchema(BaseModel):
     card: CardSchema
-    round_used: int
-
-class MatchStateRequest(BaseModel): # obsolete
-    player_id: str
-
+    round_used: int = Field(
+        ge=1,
+        le=5,
+        description="Round number when card was played (1-5)"
+    )
 
 class MatchStateResponse(BaseModel):
     match_id: str
