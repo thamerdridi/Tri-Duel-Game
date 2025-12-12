@@ -7,6 +7,7 @@ services:
   # Dedicated database instance for Game Service (zero latency)
   # Connected via isolated network (game_internal)
   # Designed to be kept on the same local storage as game_service (ex. one 'Pod' in Kubernetes)
+  # WARNING - needs valid .env file with GAME_DB_USER, GAME_DB_PASSWORD, GAME_DB_NAME
   # ============================================================
   game_postgres:
     image: postgres:15-alpine

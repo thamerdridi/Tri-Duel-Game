@@ -829,6 +829,9 @@ cat .env | grep GAME_DB
 
 ## 🚀 Quick Start Commands
 
+### Warning!
+**Before starting - copy .env.example to .env**
+
 ```bash
 # Start entire stack
 docker-compose up -d
