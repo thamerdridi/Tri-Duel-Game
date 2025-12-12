@@ -11,8 +11,6 @@ services:
   game_postgres:
     image: postgres:15-alpine
     container_name: game_postgres
-    env_file:
-      - ./game_service/.secrets.example  # Load secrets from game_service folder - for dev use .example
     environment:
       POSTGRES_USER: ${GAME_DB_USER}
       POSTGRES_PASSWORD: ${GAME_DB_PASSWORD}
@@ -22,7 +20,7 @@ services:
     networks:
       - game_internal  # Isolated network for Game Service only
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${GAME_DB_USER} -d ${GAME_DB_NAME}" ]
+      test: ["CMD-SHELL", "pg_isready -U $GAME_DB_USER -d $GAME_DB_NAME"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -109,9 +107,6 @@ services:
 
       # Database - Dedicated PostgreSQL sidecar (from .env)
       DATABASE_URL: "postgresql+psycopg2://${GAME_DB_USER}:${GAME_DB_PASSWORD}@game_postgres:5432/${GAME_DB_NAME}"
-
-    env_file:
-      - ./game_service/.secrets.example  # Load secrets from game_service folder - for dev use .example
 
     volumes:
       - ./game_service:/app
