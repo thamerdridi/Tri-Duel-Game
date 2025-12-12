@@ -102,7 +102,7 @@ class GameServiceUser(HttpUser):
 
         # Storage for current match
         self.current_match_id = None
-        self.current_cards = []
+        self.cards_count = 0  # Number of available cards (will be set after match creation)
         self.opponent_id = f"bot_{random.randint(1000, 9999)}"
 
         logger.info(f"User {self.player_id} started")
@@ -131,13 +131,15 @@ class GameServiceUser(HttpUser):
                 try:
                     data = response.json()
                     self.current_match_id = data.get("match_id")
-                    self.current_cards = [card["match_card_id"] for card in data.get("hand", [])]
+                    # Store number of cards (we'll use indices 0-4, not card IDs)
+                    hand = data.get("hand", [])
+                    self.cards_count = len(hand)
 
-                    if len(self.current_cards) == 5:
+                    if self.cards_count == 5:
                         response.success()
                         logger.debug(f"Match {self.current_match_id} created with 5 cards")
                     else:
-                        response.failure(f"Expected 5 cards, got {len(self.current_cards)}")
+                        response.failure(f"Expected 5 cards, got {self.cards_count}")
                 except Exception as e:
                     response.failure(f"Failed to parse response: {e}")
             elif response.status_code == 401:
@@ -155,16 +157,16 @@ class GameServiceUser(HttpUser):
         Weight: 3
         Tests: POST /matches/{id}/move endpoint
         """
-        if not self.current_match_id or not self.current_cards:
+        if not self.current_match_id or not hasattr(self, 'cards_count') or self.cards_count == 0:
             # No match available - skip this task
             return
 
-        # Pick random card from hand
-        card_id = random.choice(self.current_cards)
+        # Pick random card index from available cards (0 to cards_count-1)
+        card_index = random.randint(0, self.cards_count - 1)
 
         payload = {
             "player_id": self.player_id,
-            "match_card_id": card_id
+            "card_index": card_index
         }
 
         with self.client.post(
@@ -182,19 +184,20 @@ class GameServiceUser(HttpUser):
                     if data.get("status") == "waiting_for_opponent":
                         response.success()
                         logger.debug(f"Move submitted, waiting for opponent")
+                        # Decrease available cards count after successful move
+                        self.cards_count -= 1
                     elif "round" in data:
                         response.success()
                         logger.debug(f"Round {data['round']} resolved")
 
-                        # Remove used card
-                        if card_id in self.current_cards:
-                            self.current_cards.remove(card_id)
+                        # Decrease available cards count (card was used)
+                        self.cards_count -= 1
 
                         # Check if match finished
                         if data.get("match_finished"):
                             logger.info(f"Match {self.current_match_id} finished!")
                             self.current_match_id = None
-                            self.current_cards = []
+                            self.cards_count = 0
                     else:
                         response.failure("Unexpected response format")
                 except Exception as e:

@@ -132,7 +132,7 @@ async def test_finalize_success_first_try():
         assert payload['winner_external_id'] == "alice"
         assert payload['player1_score'] == 3
         assert payload['player2_score'] == 2
-        assert payload['rounds'] is None
+        assert payload['rounds'] == []  # Changed from None to empty list
         assert payload['seed'] == "test-match-123"
 
 
@@ -437,7 +437,7 @@ async def test_finalize_sends_correct_payload():
         assert payload['winner_external_id'] == "player_one"
         assert payload['player1_score'] == 5
         assert payload['player2_score'] == 0
-        assert payload['rounds'] is None
+        assert payload['rounds'] == []  # Changed from None to empty list
         assert payload['seed'] == "match-999"
 
 

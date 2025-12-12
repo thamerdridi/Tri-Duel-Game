@@ -78,7 +78,15 @@ class MatchService:
     # ============================================================
     # SUBMIT MOVE
     # ============================================================
-    def submit_move(self, match_id: str, player_id: str, match_card_id: int):
+    def submit_move(self, match_id: str, player_id: str, card_index: int):
+        """
+        Submit a move using card index (0-4) from player's hand.
+
+        Args:
+            match_id: Match identifier
+            player_id: Player making the move
+            card_index: Index in hand (0-4)
+        """
         match = self.db.query(Match).filter_by(id=match_id).first()
         if not match:
             log_if_enabled(
@@ -96,28 +104,39 @@ class MatchService:
             )
             raise ValueError("Match already finished")
 
-        card = (
+        # Get player's available cards (not used yet) ordered by ID
+        available_cards = (
             self.db.query(MatchCard)
-            .filter_by(id=match_card_id, match_id=match_id, player_id=player_id)
-            .first()
+            .filter_by(match_id=match_id, player_id=player_id, used=False)
+            .order_by(MatchCard.id)
+            .all()
         )
 
-        if not card:
+        # Validate card_index
+        if card_index < 0 or card_index >= len(available_cards):
             log_if_enabled(
                 logger,
                 "warning",
-                f"❌ INVALID_MOVE | invalid card_id={match_card_id} | "
-                f"match_id={match_id} | player={player_id}"
+                f"❌ INVALID_MOVE | card_index={card_index} out of range | "
+                f"available={len(available_cards)} | match_id={match_id} | player={player_id}"
             )
-            raise ValueError("Invalid card or player")
-        if card.used:
-            log_if_enabled(
-                logger,
-                "warning",
-                f"❌ INVALID_MOVE | card_id={match_card_id} already used | "
-                f"match_id={match_id} | player={player_id}"
+            raise ValueError(
+                f"Card index {card_index} out of range. "
+                f"You have {len(available_cards)} cards available (indices 0-{len(available_cards)-1})"
             )
-            raise ValueError("Card already used")
+
+        # Get the card at the specified index
+        card = available_cards[card_index]
+
+        # Load card definition for logging
+        card_def = self.db.query(CardDefinition).filter_by(id=card.card_def_id).first()
+
+        log_if_enabled(
+            logger,
+            "debug",
+            f"✅ CARD_SELECTED | card_index={card_index} -> match_card_id={card.id} | "
+            f"card_type={card_def.category}_power_{card_def.power} | player={player_id}"
+        )
 
         card.used = True
         card.round_used = match.current_round
@@ -128,7 +147,7 @@ class MatchService:
             logger,
             "info",
             f"🎯 MOVE_SUBMITTED | match_id={match_id} | player={player_id} | "
-            f"card_id={match_card_id} | round={match.current_round}"
+            f"card_id={card.id} | round={match.current_round}"
         )
 
         other_card = (
@@ -282,7 +301,7 @@ class MatchService:
 
         else:  # format_type == "api"
             # Format for API responses (nested structure with DOMAIN_CARDS)
-            for match_card in cards:
+            for idx, match_card in enumerate(cards):
                 card_def = defs[match_card.card_def_id]
 
                 card_dict = {
@@ -291,7 +310,7 @@ class MatchService:
                 }
 
                 item = {
-                    "match_card_id": match_card.id,
+                    "hand_index": idx,  # Add hand_index for easy card selection
                     "card": card_dict,
                 }
 

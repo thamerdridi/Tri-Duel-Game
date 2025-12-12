@@ -25,21 +25,6 @@
       "key": "match_id",
       "value": "",
       "type": "string"
-    },
-    {
-      "key": "alice_cards",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "bob_cards",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "current_round",
-      "value": "1",
-      "type": "string"
     }
   ],
   "item": [
@@ -63,12 +48,14 @@
                   "    // Save match_id",
                   "    pm.collectionVariables.set('match_id', jsonData.match_id);",
                   "    ",
-                  "    // Save Alice's cards",
-                  "    var aliceCards = jsonData.hand.map(c => c.match_card_id);",
-                  "    pm.collectionVariables.set('alice_cards', JSON.stringify(aliceCards));",
+                  "    // Verify hand_index is present (new format)",
+                  "    jsonData.hand.forEach((card, idx) => {",
+                  "        pm.expect(card).to.have.property('hand_index');",
+                  "        pm.expect(card.hand_index).to.eql(idx);",
+                  "    });",
                   "    ",
                   "    console.log('Match ID: ' + jsonData.match_id);",
-                  "    console.log('Alice cards: ' + aliceCards);",
+                  "    console.log('Alice has ' + jsonData.hand.length + ' cards with indices 0-4');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -105,11 +92,13 @@
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.player_hand).to.have.lengthOf(5);",
                   "    ",
-                  "    // Save Bob's cards",
-                  "    var bobCards = jsonData.player_hand.map(c => c.match_card_id);",
-                  "    pm.collectionVariables.set('bob_cards', JSON.stringify(bobCards));",
+                  "    // Verify hand_index is present (new format)",
+                  "    jsonData.player_hand.forEach((card, idx) => {",
+                  "        pm.expect(card).to.have.property('hand_index');",
+                  "        pm.expect(card.hand_index).to.eql(idx);",
+                  "    });",
                   "    ",
-                  "    console.log('Bob cards: ' + bobCards);",
+                  "    console.log('Bob has ' + jsonData.player_hand.length + ' cards with indices 0-4');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -139,16 +128,6 @@
           "name": "R1 - Alice plays card",
           "event": [
             {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "var aliceCards = JSON.parse(pm.collectionVariables.get('alice_cards'));",
-                  "pm.collectionVariables.set('alice_card_0', aliceCards[0]);"
-                ],
-                "type": "text/javascript"
-              }
-            },
-            {
               "listen": "test",
               "script": {
                 "exec": [
@@ -175,7 +154,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"player_id\": \"alice\",\n  \"match_card_id\": {{alice_card_0}}\n}"
+              "raw": "{\n  \"player_id\": \"alice\",\n  \"card_index\": 0\n}"
             },
             "url": {
               "raw": "{{base_url}}/matches/{{match_id}}/move",
@@ -187,16 +166,6 @@
         {
           "name": "R1 - Bob plays card",
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "var bobCards = JSON.parse(pm.collectionVariables.get('bob_cards'));",
-                  "pm.collectionVariables.set('bob_card_0', bobCards[0]);"
-                ],
-                "type": "text/javascript"
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -228,7 +197,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"player_id\": \"bob\",\n  \"match_card_id\": {{bob_card_0}}\n}"
+              "raw": "{\n  \"player_id\": \"bob\",\n  \"card_index\": 0\n}"
             },
             "url": {
               "raw": "{{base_url}}/matches/{{match_id}}/move",
@@ -245,16 +214,6 @@
         {
           "name": "R2 - Alice plays card",
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "var aliceCards = JSON.parse(pm.collectionVariables.get('alice_cards'));",
-                  "pm.collectionVariables.set('alice_card_1', aliceCards[1]);"
-                ],
-                "type": "text/javascript"
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -277,7 +236,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"player_id\": \"alice\",\n  \"match_card_id\": {{alice_card_1}}\n}"
+              "raw": "{\n  \"player_id\": \"alice\",\n  \"card_index\": 0\n}"
             },
             "url": {
               "raw": "{{base_url}}/matches/{{match_id}}/move",
@@ -289,16 +248,6 @@
         {
           "name": "R2 - Bob plays card",
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "var bobCards = JSON.parse(pm.collectionVariables.get('bob_cards'));",
-                  "pm.collectionVariables.set('bob_card_1', bobCards[1]);"
-                ],
-                "type": "text/javascript"
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -324,7 +273,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"player_id\": \"bob\",\n  \"match_card_id\": {{bob_card_1}}\n}"
+              "raw": "{\n  \"player_id\": \"bob\",\n  \"card_index\": 0\n}"
             },
             "url": {
               "raw": "{{base_url}}/matches/{{match_id}}/move",
@@ -341,16 +290,6 @@
         {
           "name": "R3 - Alice plays card",
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "var aliceCards = JSON.parse(pm.collectionVariables.get('alice_cards'));",
-                  "pm.collectionVariables.set('alice_card_2', aliceCards[2]);"
-                ],
-                "type": "text/javascript"
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -373,7 +312,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"player_id\": \"alice\",\n  \"match_card_id\": {{alice_card_2}}\n}"
+              "raw": "{\n  \"player_id\": \"alice\",\n  \"card_index\": 0\n}"
             },
             "url": {
               "raw": "{{base_url}}/matches/{{match_id}}/move",
@@ -385,16 +324,6 @@
         {
           "name": "R3 - Bob plays card",
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "var bobCards = JSON.parse(pm.collectionVariables.get('bob_cards'));",
-                  "pm.collectionVariables.set('bob_card_2', bobCards[2]);"
-                ],
-                "type": "text/javascript"
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -420,7 +349,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"player_id\": \"bob\",\n  \"match_card_id\": {{bob_card_2}}\n}"
+              "raw": "{\n  \"player_id\": \"bob\",\n  \"card_index\": 0\n}"
             },
             "url": {
               "raw": "{{base_url}}/matches/{{match_id}}/move",
@@ -437,16 +366,6 @@
         {
           "name": "R4 - Alice plays card",
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "var aliceCards = JSON.parse(pm.collectionVariables.get('alice_cards'));",
-                  "pm.collectionVariables.set('alice_card_3', aliceCards[3]);"
-                ],
-                "type": "text/javascript"
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -469,7 +388,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"player_id\": \"alice\",\n  \"match_card_id\": {{alice_card_3}}\n}"
+              "raw": "{\n  \"player_id\": \"alice\",\n  \"card_index\": 0\n}"
             },
             "url": {
               "raw": "{{base_url}}/matches/{{match_id}}/move",
@@ -481,16 +400,6 @@
         {
           "name": "R4 - Bob plays card",
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "var bobCards = JSON.parse(pm.collectionVariables.get('bob_cards'));",
-                  "pm.collectionVariables.set('bob_card_3', bobCards[3]);"
-                ],
-                "type": "text/javascript"
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -516,7 +425,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"player_id\": \"bob\",\n  \"match_card_id\": {{bob_card_3}}\n}"
+              "raw": "{\n  \"player_id\": \"bob\",\n  \"card_index\": 0\n}"
             },
             "url": {
               "raw": "{{base_url}}/matches/{{match_id}}/move",
@@ -533,16 +442,6 @@
         {
           "name": "R5 - Alice plays last card",
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "var aliceCards = JSON.parse(pm.collectionVariables.get('alice_cards'));",
-                  "pm.collectionVariables.set('alice_card_4', aliceCards[4]);"
-                ],
-                "type": "text/javascript"
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -565,7 +464,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"player_id\": \"alice\",\n  \"match_card_id\": {{alice_card_4}}\n}"
+              "raw": "{\n  \"player_id\": \"alice\",\n  \"card_index\": 0\n}"
             },
             "url": {
               "raw": "{{base_url}}/matches/{{match_id}}/move",
@@ -577,16 +476,6 @@
         {
           "name": "R5 - Bob plays last card - MATCH FINISHES",
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "var bobCards = JSON.parse(pm.collectionVariables.get('bob_cards'));",
-                  "pm.collectionVariables.set('bob_card_4', bobCards[4]);"
-                ],
-                "type": "text/javascript"
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -620,7 +509,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"player_id\": \"bob\",\n  \"match_card_id\": {{bob_card_4}}\n}"
+              "raw": "{\n  \"player_id\": \"bob\",\n  \"card_index\": 0\n}"
             },
             "url": {
               "raw": "{{base_url}}/matches/{{match_id}}/move",

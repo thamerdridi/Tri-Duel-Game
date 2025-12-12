@@ -203,12 +203,13 @@ def test_submit_move_without_token(client):
     assert create_response.status_code == 200, f"Match creation failed: {create_response.status_code} - {create_response.text}"
 
     match_id = create_response.json()["match_id"]
-    card_id = create_response.json()["hand"][0]["match_card_id"]
-    
-    # Try to submit move without token
+    # Verify hand_index is present
+    assert "hand_index" in create_response.json()["hand"][0]
+
+    # Try to submit move without token (use card_index instead of match_card_id)
     response = client.post(
         f"/matches/{match_id}/move",
-        json={"player_id": "alice", "match_card_id": card_id}
+        json={"player_id": "alice", "card_index": 0}
     )
     
     assert response.status_code == 401
@@ -223,12 +224,13 @@ def test_submit_move_for_another_player(client):
         headers={"Authorization": "Bearer alice_token"}
     )
     match_id = create_response.json()["match_id"]
-    card_id = create_response.json()["hand"][0]["match_card_id"]
-    
+    # Verify hand_index is present
+    assert "hand_index" in create_response.json()["hand"][0]
+
     # Try to submit move as Bob using Alice's token (mock will extract "alice" from token)
     response = client.post(
         f"/matches/{match_id}/move",
-        json={"player_id": "bob", "match_card_id": card_id},
+        json={"player_id": "bob", "card_index": 0},
         headers={"Authorization": "Bearer alice_token"}
     )
     
@@ -244,11 +246,12 @@ def test_submit_move_with_valid_token(client):
         headers={"Authorization": "Bearer alice_token"}
     )
     match_id = create_response.json()["match_id"]
-    card_id = create_response.json()["hand"][0]["match_card_id"]
-    
+    # Verify hand_index is present in new format
+    assert "hand_index" in create_response.json()["hand"][0]
+
     response = client.post(
         f"/matches/{match_id}/move",
-        json={"player_id": "alice", "match_card_id": card_id},
+        json={"player_id": "alice", "card_index": 0},
         headers={"Authorization": "Bearer alice_token"}
     )
     

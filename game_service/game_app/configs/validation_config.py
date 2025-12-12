@@ -22,9 +22,10 @@ import os
 MIN_CARD_POWER = 1
 MAX_CARD_POWER = 10  # Allows future expansion beyond current max of 6
 
-# Card ID bounds (for match_card_id, card instance IDs)
+# Card ID bounds (internal use only - for database IDs, not exposed in API)
+# NOTE: API now uses card_index (0-4) instead of match_card_id
 MIN_CARD_ID = 1
-MAX_CARD_ID = 100000  # Maximum card instance ID in a match
+MAX_CARD_ID = 100000  # Maximum card instance ID in database
 
 # ============================================================
 # PLAYER VALIDATION

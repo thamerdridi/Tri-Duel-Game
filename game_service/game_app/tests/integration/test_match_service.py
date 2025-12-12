@@ -98,8 +98,11 @@ def test_submit_move_waits_for_opponent(db_session):
     match = service.create_match("alice", "bob")
 
     hand = service.get_player_hand(match.id, "alice")
+    # Verify hand_index is present in new format
+    assert "hand_index" in hand[0]
 
-    response = service.submit_move(match.id, "alice", hand[0]['match_card_id'])
+    # Use card_index (positional argument, not keyword)
+    response = service.submit_move(match.id, "alice", 0)
     assert response["status"] == "waiting_for_opponent"
 
 def test_submit_move_resolves_round(db_session):
@@ -109,12 +112,12 @@ def test_submit_move_resolves_round(db_session):
     hand_a = service.get_player_hand(match.id, "alice")
     hand_b = service.get_player_hand(match.id, "bob")
 
-    # Alice plays
-    r1 = service.submit_move(match.id, "alice", hand_a[0]['match_card_id'])
+    # Alice plays (index 0)
+    r1 = service.submit_move(match.id, "alice", 0)
     assert r1["status"] == "waiting_for_opponent"
 
-    # Bob plays -> round resolved
-    r2 = service.submit_move(match.id, "bob", hand_b[0]['match_card_id'])
+    # Bob plays -> round resolved (index 0)
+    r2 = service.submit_move(match.id, "bob", 0)
     assert r2["round"] == 1
     assert "winner" in r2
     assert "reason" in r2
@@ -127,9 +130,9 @@ def test_match_finishes_after_five_rounds(db_session):
         hand_a = service.get_player_hand(match.id, "alice")
         hand_b = service.get_player_hand(match.id, "bob")
 
-        service.submit_move(match.id, "alice", hand_a[0]['match_card_id'])
-        #assert hand_a[0]['card']['id'] == hand_a[0]['match_card_id']
-        result = service.submit_move(match.id, "bob", hand_b[0]['match_card_id'])
+        # Use index 0 (always first card in available hand)
+        service.submit_move(match.id, "alice", 0)
+        result = service.submit_move(match.id, "bob", 0)
 
     assert result["match_finished"] is True
     assert match.status == "finished"
@@ -137,16 +140,21 @@ def test_match_finishes_after_five_rounds(db_session):
 
 
 def test_card_cannot_be_used_twice(db_session):
+    """Test that after playing card at index 0, it's no longer available."""
     service = MatchService(db_session)
     match = service.create_match("alice", "bob")
 
-    hand = service.get_player_hand(match.id, "alice")
-    card_id = hand[0]['match_card_id']
+    hand_before = service.get_player_hand(match.id, "alice")
+    assert len(hand_before) == 5
 
-    service.submit_move(match.id, "alice", card_id)
+    # Play first card (index 0)
+    service.submit_move(match.id, "alice", 0)
 
-    with pytest.raises(ValueError):
-        service.submit_move(match.id, "alice", card_id)
+    # After playing, hand should have 4 cards
+    hand_after = service.get_player_hand(match.id, "alice")
+    assert len(hand_after) == 4
+
+    # The card that was at index 0 is no longer in hand (used=True)
 
 
 # ============================================================
@@ -170,11 +178,8 @@ def test_match_finalization_callback_is_called(db_session):
 
         # Play 5 rounds to finish match
         for _ in range(5):
-            hand_a = service.get_player_hand(match.id, "alice")
-            hand_b = service.get_player_hand(match.id, "bob")
-
-            service.submit_move(match.id, "alice", hand_a[0]['match_card_id'])
-            service.submit_move(match.id, "bob", hand_b[0]['match_card_id'])
+            service.submit_move(match.id, "alice", 0)
+            service.submit_move(match.id, "bob", 0)
 
         # Verify finalize_match was called
         assert mock_finalize.call_count == 1
@@ -206,11 +211,8 @@ def test_match_finalization_with_winner(db_session):
 
         # Play 5 rounds
         for _ in range(5):
-            hand_a = service.get_player_hand(match.id, "alice")
-            hand_b = service.get_player_hand(match.id, "bob")
-
-            service.submit_move(match.id, "alice", hand_a[0]['match_card_id'])
-            service.submit_move(match.id, "bob", hand_b[0]['match_card_id'])
+            service.submit_move(match.id, "alice", 0)
+            service.submit_move(match.id, "bob", 0)
 
         # Check that winner is either alice or bob (not None)
         call_args = mock_finalize.call_args[1]
@@ -241,11 +243,8 @@ def test_match_finalization_with_draw(db_session):
 
         # Play 5 rounds
         for _ in range(5):
-            hand_a = service.get_player_hand(match.id, "alice")
-            hand_b = service.get_player_hand(match.id, "bob")
-
-            service.submit_move(match.id, "alice", hand_a[0]['match_card_id'])
-            service.submit_move(match.id, "bob", hand_b[0]['match_card_id'])
+            service.submit_move(match.id, "alice", 0)
+            service.submit_move(match.id, "bob", 0)
 
         # Check for draw scenario
         call_args = mock_finalize.call_args[1]
@@ -271,11 +270,8 @@ def test_match_finalization_not_called_before_finish(db_session):
 
         # Play only 3 rounds (match not finished)
         for _ in range(3):
-            hand_a = service.get_player_hand(match.id, "alice")
-            hand_b = service.get_player_hand(match.id, "bob")
-
-            service.submit_move(match.id, "alice", hand_a[0]['match_card_id'])
-            service.submit_move(match.id, "bob", hand_b[0]['match_card_id'])
+            service.submit_move(match.id, "alice", 0)
+            service.submit_move(match.id, "bob", 0)
 
         # Verify finalize_match was NOT called
         assert mock_finalize.call_count == 0
@@ -296,11 +292,8 @@ def test_match_finalization_correct_points(db_session):
 
         # Play 5 rounds
         for _ in range(5):
-            hand_a = service.get_player_hand(match.id, "alice")
-            hand_b = service.get_player_hand(match.id, "bob")
-
-            service.submit_move(match.id, "alice", hand_a[0]['match_card_id'])
-            service.submit_move(match.id, "bob", hand_b[0]['match_card_id'])
+            service.submit_move(match.id, "alice", 0)
+            service.submit_move(match.id, "bob", 0)
 
         # Verify points match database state
         call_args = mock_finalize.call_args[1]
@@ -330,11 +323,8 @@ def test_match_continues_even_if_finalization_fails(db_session):
 
         # Play 5 rounds
         for _ in range(5):
-            hand_a = service.get_player_hand(match.id, "alice")
-            hand_b = service.get_player_hand(match.id, "bob")
-
-            service.submit_move(match.id, "alice", hand_a[0]['match_card_id'])
-            result = service.submit_move(match.id, "bob", hand_b[0]['match_card_id'])
+            service.submit_move(match.id, "alice", 0)
+            result = service.submit_move(match.id, "bob", 0)
 
         # Match should still be finished despite callback failure
         assert result["match_finished"] is True

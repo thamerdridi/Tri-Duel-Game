@@ -90,7 +90,7 @@ async def submit_move(
     service = MatchService(db)
 
     try:
-        result = service.submit_move(match_id, data.player_id, data.match_card_id)
+        result = service.submit_move(match_id, data.player_id, data.card_index)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

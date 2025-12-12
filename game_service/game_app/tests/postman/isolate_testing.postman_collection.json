@@ -20,11 +20,6 @@
       "key": "match_id",
       "value": "",
       "type": "string"
-    },
-    {
-      "key": "player1_card_id",
-      "value": "",
-      "type": "string"
     }
   ],
   "item": [
@@ -91,10 +86,11 @@
                   "    pm.expect(jsonData.hand).to.have.lengthOf(5);",
                   "});",
                   "",
-                  "pm.test(\"Save first card for moves\", function () {",
+                  "pm.test(\"Hand contains hand_index field\", function () {",
                   "    var jsonData = pm.response.json();",
                   "    if (jsonData.hand && jsonData.hand.length > 0) {",
-                  "        pm.collectionVariables.set(\"player1_card_id\", jsonData.hand[0].match_card_id);",
+                  "        pm.expect(jsonData.hand[0]).to.have.property('hand_index');",
+                  "        pm.expect(jsonData.hand[0].hand_index).to.eql(0);",
                   "    }",
                   "});",
                   "",
@@ -260,7 +256,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"player_id\": \"alice\",\n  \"match_card_id\": {{player1_card_id}}\n}"
+              "raw": "{\n  \"player_id\": \"alice\",\n  \"card_index\": 0\n}"
             },
             "url": {
               "raw": "{{base_url}}/matches/{{match_id}}/move",

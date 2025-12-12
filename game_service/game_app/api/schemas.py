@@ -30,7 +30,13 @@ class CardSchema(BaseModel):
     )
 
 class HandCardSchema(BaseModel):
-    match_card_id: int = Field(ge=MIN_CARD_ID, description="Match card instance ID")
+    """Card in player's hand with index for easy selection."""
+    hand_index: int = Field(
+        ge=0,
+        le=HAND_SIZE-1,
+        description="Index in hand (0-4) - USE THIS to select card!",
+        examples=[0, 1, 2, 3, 4]
+    )
     card: CardSchema
 
 
@@ -82,11 +88,12 @@ class CreateMatchResponse(BaseModel):
 # SUBMIT MOVE
 # ============================================================
 class MoveRequest(BaseModel):
-    match_card_id: int = Field(
-        ge=MIN_CARD_ID,
-        le=MAX_CARD_ID,
-        description="ID of card to play from hand",
-        examples=[1, 42, 99]
+    """Request to submit a move - select card by index in hand (0-4)."""
+    card_index: int = Field(
+        ge=0,
+        le=HAND_SIZE-1,
+        description="Index of card in hand (0-4)",
+        examples=[0, 1, 2, 3, 4]
     )
     player_id: str = Field(
         min_length=MIN_PLAYER_ID_LENGTH,

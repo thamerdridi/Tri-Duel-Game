@@ -134,39 +134,40 @@ def test_create_match_valid_with_underscores_hyphens():
 
 def test_move_request_valid():
     """Test that valid move request passes validation."""
-    request = MoveRequest(match_card_id=42, player_id="alice")
-    assert request.match_card_id == 42
+    request = MoveRequest(card_index=2, player_id="alice")
+    assert request.card_index == 2
     assert request.player_id == "alice"
 
 
-def test_move_request_negative_card_id():
-    """Test that negative card IDs are rejected."""
+def test_move_request_negative_card_index():
+    """Test that negative card index is rejected."""
     with pytest.raises(ValidationError) as exc_info:
-        MoveRequest(match_card_id=-1, player_id="alice")
+        MoveRequest(card_index=-1, player_id="alice")
     errors = exc_info.value.errors()
-    assert any(f"greater than or equal to {MIN_CARD_ID}" in str(error) for error in errors)
+    assert any("greater than or equal to 0" in str(error) for error in errors)
 
 
-def test_move_request_zero_card_id():
-    """Test that zero card ID is rejected."""
+def test_move_request_too_large_card_index():
+    """Test that card index > 4 is rejected."""
     with pytest.raises(ValidationError) as exc_info:
-        MoveRequest(match_card_id=0, player_id="alice")
+        MoveRequest(card_index=5, player_id="alice")
     errors = exc_info.value.errors()
-    assert any(f"greater than or equal to {MIN_CARD_ID}" in str(error) for error in errors)
+    assert any("less than or equal to 4" in str(error) for error in errors)
 
 
-def test_move_request_too_large_card_id():
-    """Test that excessively large card IDs are rejected."""
-    with pytest.raises(ValidationError) as exc_info:
-        MoveRequest(match_card_id=MAX_CARD_ID + 1, player_id="alice")
-    errors = exc_info.value.errors()
-    assert any(f"less than or equal to {MAX_CARD_ID}" in str(error) for error in errors)
+def test_move_request_valid_boundaries():
+    """Test that card_index boundaries (0 and 4) are valid."""
+    request_min = MoveRequest(card_index=0, player_id="alice")
+    assert request_min.card_index == 0
+
+    request_max = MoveRequest(card_index=4, player_id="alice")
+    assert request_max.card_index == 4
 
 
 def test_move_request_invalid_player_id():
     """Test that invalid player_id format is rejected."""
     with pytest.raises(ValidationError) as exc_info:
-        MoveRequest(match_card_id=42, player_id="alice; DROP TABLE;")
+        MoveRequest(card_index=2, player_id="alice; DROP TABLE;")
     errors = exc_info.value.errors()
     assert any("pattern" in str(error) for error in errors)
 
@@ -282,16 +283,7 @@ def test_create_match_boundary_max_length():
     assert len(request.player1_id) == MAX_PLAYER_ID_LENGTH
 
 
-def test_move_request_boundary_min_card_id():
-    """Test minimum valid card ID."""
-    request = MoveRequest(match_card_id=MIN_CARD_ID, player_id="alice")
-    assert request.match_card_id == MIN_CARD_ID
-
-
-def test_move_request_boundary_max_card_id():
-    """Test maximum valid card ID."""
-    request = MoveRequest(match_card_id=MAX_CARD_ID, player_id="alice")
-    assert request.match_card_id == MAX_CARD_ID
+# Boundary tests for card_index already covered in test_move_request_valid_boundaries above
 
 
 def test_card_schema_boundary_min_power():
