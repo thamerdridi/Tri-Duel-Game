@@ -7,7 +7,28 @@ from game_app.database.database import Base, engine, SessionLocal
 from game_app.database.models import *
 from game_app.database.init.initialize_cards import init_cards
 
-app = FastAPI()
+app = FastAPI(
+    title="Tri-Duel Game Service",
+    description="""
+    🎮 **Tri-Duel Game Service** - Match logic and card game engine
+    
+    ## Features
+    * 🃏 Create and manage matches
+    * 🎯 Submit moves and resolve rounds
+    * 🪨📄✂️ Rock-Paper-Scissors card mechanics
+    * 🎨 Beautiful SVG card display
+    
+    ## Card Display
+    Use `/cards` endpoints to view all available cards with SVG visualization.
+    No authentication required for viewing cards!
+    
+    ## Authentication
+    Protected endpoints require JWT Bearer token from Auth Service.
+    """,
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
 @app.on_event("startup")
 def startup_event():

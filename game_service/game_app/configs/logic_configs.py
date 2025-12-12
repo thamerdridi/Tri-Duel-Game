@@ -7,8 +7,10 @@ BEATS = {
     "paper": "rock",
 }
 
-# Hand size
-HAND_SIZE = os.getenv("HAND_SIZE", 5)
+# Hand size (cards per player)
+HAND_SIZE = int(os.getenv("HAND_SIZE", "5"))
 
-# Rounds count
-MAX_ROUNDS = os.getenv("MAX_ROUNDS", 5)
+# Maximum rounds per match
+MAX_ROUNDS = int(os.getenv("MAX_ROUNDS", "5"))
+
+

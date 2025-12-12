@@ -68,7 +68,7 @@ paths:
         "200":
           description: Token is valid
 
-  /health:
+  /auth/health:
     get:
       summary: Health check
       tags: [Auth]
@@ -192,7 +192,7 @@ paths:
         "200":
           description: A list of player rankings
 
-  /health:
+  /players/health:
     get:
       summary: Health check
       tags: [Player]
@@ -202,11 +202,12 @@ paths:
 
   ###############################################
   # GAME SERVICE (PORT 8003)
+  # API Gateway Prefix: /game/*
   ###############################################
 
-  /matches/:
+  /game/matches:
     post:
-      summary: Start new match (protected)
+      summary: Create new match (protected)
       tags: [Game]
       security:
         - bearerAuth: []
@@ -216,70 +217,258 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - player1_id
+                - player2_id
               properties:
                 player1_id:
                   type: string
+                  pattern: "^[a-zA-Z0-9_-]+$"
+                  minLength: 1
+                  maxLength: 100
+                  description: "Username (alphanumeric, underscore, hyphen)"
+                  example: "alice"
                 player2_id:
                   type: string
+                  pattern: "^[a-zA-Z0-9_-]+$"
+                  minLength: 1
+                  maxLength: 100
+                  description: "Opponent username"
+                  example: "bob"
       responses:
-        "201":
-          description: Match started
+        "200":
+          description: Match created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  match_id:
+                    type: string
+                  player_id:
+                    type: string
+                  hand:
+                    type: array
+                    items:
+                      type: object
+                  status:
+                    type: string
+        "403":
+          description: Forbidden - can only create matches as yourself
+        "422":
+          description: Validation error
 
-  /matches/{id}/move:
+  /game/matches/{match_id}/move:
     post:
       summary: Submit a card move (protected)
       tags: [Game]
       security:
         - bearerAuth: []
       parameters:
-        - name: id
+        - name: match_id
           in: path
           required: true
           schema:
             type: string
+          description: Match identifier
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - player_id
+                - match_card_id
               properties:
                 player_id:
                   type: string
+                  pattern: "^[a-zA-Z0-9_-]+$"
+                  description: "Player making the move"
                 match_card_id:
                   type: integer
+                  minimum: 1
+                  maximum: 100000
+                  description: "ID of card to play from hand"
       responses:
         "200":
           description: Move accepted
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    description: "Waiting for opponent"
+                    properties:
+                      status:
+                        type: string
+                        enum: ["waiting_for_opponent"]
+                  - type: object
+                    description: "Round result"
+                    properties:
+                      round:
+                        type: integer
+                      winner:
+                        type: string
+                        nullable: true
+                      reason:
+                        type: string
+                      points_p1:
+                        type: integer
+                      points_p2:
+                        type: integer
+                      match_finished:
+                        type: boolean
+                      match_winner:
+                        type: string
+                        nullable: true
+        "400":
+          description: Invalid move
+        "403":
+          description: Forbidden
 
-  /matches/{id}:
+  /game/matches/{match_id}:
     get:
       summary: Get match state (protected)
       tags: [Game]
       security:
         - bearerAuth: []
       parameters:
-        - name: id
+        - name: match_id
           in: path
           required: true
           schema:
             type: string
+          description: Match identifier
         - name: player_id
           in: query
           required: true
           schema:
             type: string
+          description: Player identifier (must match authenticated user)
       responses:
         "200":
-          description: Match state
+          description: Match state retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  match_id:
+                    type: string
+                  status:
+                    type: string
+                  current_round:
+                    type: integer
+                  points_p1:
+                    type: integer
+                  points_p2:
+                    type: integer
+                  player_hand:
+                    type: array
+                    items:
+                      type: object
+                  used_cards:
+                    type: array
+                    items:
+                      type: object
+                  opponent_used_cards:
+                    type: array
+                    items:
+                      type: object
+                  match_winner:
+                    type: string
+                    nullable: true
+        "403":
+          description: Forbidden
+        "404":
+          description: Match not found
 
-  /:
+  /game/cards:
+    get:
+      summary: Get deck gallery as SVG (public)
+      tags: [Game]
+      description: "Displays all available cards in organized grid (5 per row) with statistics"
+      responses:
+        "200":
+          description: SVG deck gallery
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+                format: binary
+
+  /game/cards/{card_id}:
+    get:
+      summary: Get card detail as SVG (public)
+      tags: [Game]
+      description: "Shows single card with category, power level, and rarity"
+      parameters:
+        - name: card_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Card definition ID
+      responses:
+        "200":
+          description: SVG card detail
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Card not found
+
+  /game/matches/{match_id}/hand:
+    get:
+      summary: Get player hand visualization as SVG (protected)
+      tags: [Game]
+      security:
+        - bearerAuth: []
+      description: "Shows player's cards with visual distinction between available and used cards"
+      parameters:
+        - name: match_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Match identifier
+        - name: player_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Player identifier (must match authenticated user)
+      responses:
+        "200":
+          description: SVG player hand visualization
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: Forbidden
+        "404":
+          description: Match not found
+
+  /game/health:
     get:
       summary: Health check
       tags: [Game]
       responses:
         "200":
-          description: OK
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
 
 components:
   securitySchemes:

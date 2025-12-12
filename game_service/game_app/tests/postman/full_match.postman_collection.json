@@ -1,0 +1,637 @@
+{
+  "info": {
+    "name": "Full Match Flow - Complete Game",
+    "description": "Complete match flow with 2 players playing 5 rounds until match finishes.\n\n## Flow:\n1. Create match (alice vs bob)\n2. Round 1-5: Both players submit moves\n3. Verify match finishes after 5 rounds\n4. Check finalization callback to Player Service\n\n## Setup:\n1. Set alice_token and bob_token (JWT from Auth Service)\n2. Run entire collection with Collection Runner\n3. Watch match progress through 5 rounds\n\nVersion: 1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8003",
+      "type": "string"
+    },
+    {
+      "key": "alice_token",
+      "value": "your-alice-jwt-here",
+      "type": "string"
+    },
+    {
+      "key": "bob_token",
+      "value": "your-bob-jwt-here",
+      "type": "string"
+    },
+    {
+      "key": "match_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup - Create Match",
+      "item": [
+        {
+          "name": "1. POST Create Match (Alice)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Match created successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('match_id');",
+                  "    pm.expect(jsonData).to.have.property('hand');",
+                  "    pm.expect(jsonData.hand).to.have.lengthOf(5);",
+                  "    ",
+                  "    // Save match_id",
+                  "    pm.collectionVariables.set('match_id', jsonData.match_id);",
+                  "    ",
+                  "    // Verify hand_index is present (new format)",
+                  "    jsonData.hand.forEach((card, idx) => {",
+                  "        pm.expect(card).to.have.property('hand_index');",
+                  "        pm.expect(card.hand_index).to.eql(idx);",
+                  "    });",
+                  "    ",
+                  "    console.log('Match ID: ' + jsonData.match_id);",
+                  "    console.log('Alice has ' + jsonData.hand.length + ' cards with indices 0-4');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{alice_token}}", "type": "string"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player1_id\": \"alice\",\n  \"player2_id\": \"bob\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/matches",
+              "host": ["{{base_url}}"],
+              "path": ["matches"]
+            }
+          }
+        },
+        {
+          "name": "2. GET Match State (Bob) - Get Cards",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Bob got his cards\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.player_hand).to.have.lengthOf(5);",
+                  "    ",
+                  "    // Verify hand_index is present (new format)",
+                  "    jsonData.player_hand.forEach((card, idx) => {",
+                  "        pm.expect(card).to.have.property('hand_index');",
+                  "        pm.expect(card.hand_index).to.eql(idx);",
+                  "    });",
+                  "    ",
+                  "    console.log('Bob has ' + jsonData.player_hand.length + ' cards with indices 0-4');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{bob_token}}", "type": "string"}]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}?player_id=bob",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}"],
+              "query": [{"key": "player_id", "value": "bob"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Round 1",
+      "item": [
+        {
+          "name": "R1 - Alice plays card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Alice move accepted\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    // Should be waiting for Bob",
+                  "    if (jsonData.status) {",
+                  "        pm.expect(jsonData.status).to.eql('waiting_for_opponent');",
+                  "        console.log('Round 1: Alice waiting for Bob');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{alice_token}}", "type": "string"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player_id\": \"alice\",\n  \"card_index\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}/move",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}", "move"]
+            }
+          }
+        },
+        {
+          "name": "R1 - Bob plays card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Round 1 resolved\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('round');",
+                  "    pm.expect(jsonData.round).to.eql(1);",
+                  "    pm.expect(jsonData).to.have.property('winner');",
+                  "    pm.expect(jsonData).to.have.property('reason');",
+                  "    pm.expect(jsonData.match_finished).to.be.false;",
+                  "    ",
+                  "    console.log('Round 1 winner: ' + jsonData.winner);",
+                  "    console.log('Reason: ' + jsonData.reason);",
+                  "    console.log('Score: ' + jsonData.points_p1 + ' - ' + jsonData.points_p2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{bob_token}}", "type": "string"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player_id\": \"bob\",\n  \"card_index\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}/move",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}", "move"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Round 2",
+      "item": [
+        {
+          "name": "R2 - Alice plays card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Alice move accepted\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    console.log('Round 2: Alice played');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{alice_token}}", "type": "string"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player_id\": \"alice\",\n  \"card_index\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}/move",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}", "move"]
+            }
+          }
+        },
+        {
+          "name": "R2 - Bob plays card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Round 2 resolved\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.round).to.eql(2);",
+                  "    console.log('Round 2 winner: ' + jsonData.winner);",
+                  "    console.log('Score: ' + jsonData.points_p1 + ' - ' + jsonData.points_p2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{bob_token}}", "type": "string"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player_id\": \"bob\",\n  \"card_index\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}/move",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}", "move"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Round 3",
+      "item": [
+        {
+          "name": "R3 - Alice plays card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Alice move accepted\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    console.log('Round 3: Alice played');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{alice_token}}", "type": "string"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player_id\": \"alice\",\n  \"card_index\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}/move",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}", "move"]
+            }
+          }
+        },
+        {
+          "name": "R3 - Bob plays card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Round 3 resolved\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.round).to.eql(3);",
+                  "    console.log('Round 3 winner: ' + jsonData.winner);",
+                  "    console.log('Score: ' + jsonData.points_p1 + ' - ' + jsonData.points_p2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{bob_token}}", "type": "string"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player_id\": \"bob\",\n  \"card_index\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}/move",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}", "move"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Round 4",
+      "item": [
+        {
+          "name": "R4 - Alice plays card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Alice move accepted\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    console.log('Round 4: Alice played');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{alice_token}}", "type": "string"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player_id\": \"alice\",\n  \"card_index\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}/move",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}", "move"]
+            }
+          }
+        },
+        {
+          "name": "R4 - Bob plays card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Round 4 resolved\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.round).to.eql(4);",
+                  "    console.log('Round 4 winner: ' + jsonData.winner);",
+                  "    console.log('Score: ' + jsonData.points_p1 + ' - ' + jsonData.points_p2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{bob_token}}", "type": "string"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player_id\": \"bob\",\n  \"card_index\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}/move",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}", "move"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Round 5 - Final Round",
+      "item": [
+        {
+          "name": "R5 - Alice plays last card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Alice final move accepted\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    console.log('Round 5: Alice played final card');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{alice_token}}", "type": "string"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player_id\": \"alice\",\n  \"card_index\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}/move",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}", "move"]
+            }
+          }
+        },
+        {
+          "name": "R5 - Bob plays last card - MATCH FINISHES",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"🏁 MATCH FINISHED!\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    pm.expect(jsonData.round).to.eql(5);",
+                  "    pm.expect(jsonData.match_finished).to.be.true;",
+                  "    pm.expect(jsonData.match_winner).to.not.be.null;",
+                  "    ",
+                  "    console.log('');",
+                  "    console.log('🏁 MATCH FINISHED!');",
+                  "    console.log('Round 5 winner: ' + jsonData.winner);",
+                  "    console.log('Final Score: ' + jsonData.points_p1 + ' - ' + jsonData.points_p2);",
+                  "    console.log('🏆 MATCH WINNER: ' + jsonData.match_winner);",
+                  "    console.log('');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{bob_token}}", "type": "string"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player_id\": \"bob\",\n  \"card_index\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}/move",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}", "move"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verification - Check Final State",
+      "item": [
+        {
+          "name": "Verify Match Finished (Alice view)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Match is finished\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('finished');",
+                  "    pm.expect(jsonData.current_round).to.eql(6);",
+                  "    pm.expect(jsonData.match_winner).to.not.be.null;",
+                  "    ",
+                  "    console.log('Match Status: ' + jsonData.status);",
+                  "    console.log('Winner: ' + jsonData.match_winner);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{alice_token}}", "type": "string"}]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}?player_id=alice",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}"],
+              "query": [{"key": "player_id", "value": "alice"}]
+            }
+          }
+        },
+        {
+          "name": "Verify Match Finished (Bob view)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Match is finished for Bob too\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('finished');",
+                  "    pm.expect(jsonData.match_winner).to.not.be.null;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{bob_token}}", "type": "string"}]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}?player_id=bob",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}"],
+              "query": [{"key": "player_id", "value": "bob"}]
+            }
+          }
+        },
+        {
+          "name": "Check Player Service Received Finalization",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Player Service has match history\", function () {",
+                  "    // This checks if Player Service received the finalization callback",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    // Should have at least 1 match",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "    ",
+                  "    if (jsonData.length > 0) {",
+                  "        console.log('✅ Player Service received finalization!');",
+                  "        console.log('Total matches in history: ' + jsonData.length);",
+                  "    } else {",
+                  "        console.log('⚠️ No matches in Player Service - check callback!');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8002/players/alice/matches",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8002",
+              "path": ["players", "alice", "matches"]
+            },
+            "description": "Checks if Player Service received the match finalization callback"
+          }
+        }
+      ]
+    }
+  ]
+}
+

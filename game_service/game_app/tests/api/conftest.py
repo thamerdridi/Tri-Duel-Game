@@ -140,7 +140,7 @@ def client():
             "exp": 9999999999
         }
 
-    from game_app.auth import get_current_user
+    from game_app.clients.auth_client import get_current_user
 
     # Apply overrides BEFORE creating TestClient
     app.dependency_overrides[get_db] = override_get_db

@@ -117,12 +117,13 @@ def test_first_move_waits_for_opponent_api(client):
         f"/matches/{match_id}?player_id=alice",
         headers={"Authorization": "Bearer alice_token"}
     ).json()
-    card = state["player_hand"][0]["match_card_id"]
+    # Verify hand_index is present in response
+    assert "hand_index" in state["player_hand"][0]
 
-    # submit move
+    # submit move using card_index (0-4)
     response = client.post(f"/matches/{match_id}/move", json={
         "player_id": "alice",
-        "match_card_id": card
+        "card_index": 0  # First card in hand
     }, headers={"Authorization": "Bearer alice_token"})
 
     assert response.status_code == 200
@@ -146,16 +147,16 @@ def test_second_move_resolves_round_api(client):
         headers={"Authorization": "Bearer bob_token"}
     ).json()["player_hand"]
 
-    # Alice
+    # Alice plays first card (index 0)
     client.post(f"/matches/{match_id}/move", json={
         "player_id": "alice",
-        "match_card_id": hand_a[0]["match_card_id"]
+        "card_index": 0
     }, headers={"Authorization": "Bearer alice_token"})
 
-    # Bob
+    # Bob plays first card (index 0)
     result = client.post(f"/matches/{match_id}/move", json={
         "player_id": "bob",
-        "match_card_id": hand_b[0]["match_card_id"]
+        "card_index": 0
     }, headers={"Authorization": "Bearer bob_token"})
 
     data = result.json()
@@ -181,14 +182,15 @@ def test_match_finishes_after_five_rounds_api(client):
             headers={"Authorization": "Bearer bob_token"}
         ).json()["player_hand"]
 
+        # Play cards by index (always 0 since unused cards shift)
         client.post(f"/matches/{match_id}/move", json={
             "player_id": "alice",
-            "match_card_id": hand_a[0]["match_card_id"]
+            "card_index": 0
         }, headers={"Authorization": "Bearer alice_token"})
 
         response = client.post(f"/matches/{match_id}/move", json={
             "player_id": "bob",
-            "match_card_id": hand_b[0]["match_card_id"]
+            "card_index": 0
         }, headers={"Authorization": "Bearer bob_token"})
 
     data = response.json()
