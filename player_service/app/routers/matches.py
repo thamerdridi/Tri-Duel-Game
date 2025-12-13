@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import PlayerProfile, Match, MatchRound
+from ..models import PlayerProfile, Match
 from ..schemas import MatchCreate
 
 
@@ -32,7 +32,7 @@ def get_or_create_player(external_id: str, db: Session) -> PlayerProfile:
 def create_match(payload: MatchCreate, db: Session = Depends(get_db)):
     """
     Called by Game Service when a match finishes.
-    Stores match + rounds as immutable history.
+    Stores match history (no per-round details).
     """
 
     # Players
@@ -52,28 +52,10 @@ def create_match(payload: MatchCreate, db: Session = Depends(get_db)):
         winner_id=winner_id,
         player1_score=payload.player1_score,
         player2_score=payload.player2_score,
-        rounds_played=len(payload.rounds),
         seed=payload.seed,
     )
     db.add(match)
     db.flush()  # get match.id
-
-    # Create rounds
-    for r in payload.rounds:
-        round_winner_id = None
-        if r.winner_external_id is not None:
-            rw = get_or_create_player(r.winner_external_id, db)
-            round_winner_id = rw.id
-
-        db.add(
-            MatchRound(
-                match_id=match.id,
-                round_number=r.round_number,
-                player1_card_id=r.player1_card_id,
-                player2_card_id=r.player2_card_id,
-                winner_id=round_winner_id,
-            )
-        )
 
     db.commit()
 

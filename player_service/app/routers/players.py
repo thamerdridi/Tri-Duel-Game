@@ -5,12 +5,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from ..db import get_db
-from ..models import PlayerProfile, Match, MatchRound, Card
+from ..models import PlayerProfile, Match
 from ..schemas import (
     MatchSummaryOut,
-    MatchDetailOut,
-    MatchRoundOut,
-    CardOut,
     LeaderboardEntry,
 )
 
@@ -35,7 +32,6 @@ def _match_to_summary(m: Match, db: Session) -> MatchSummaryOut:
         winner_external_id=winner_external_id,
         player1_score=m.player1_score,
         player2_score=m.player2_score,
-        rounds_played=m.rounds_played,
         created_at=m.created_at,
         finished_at=m.finished_at,
     )
@@ -71,7 +67,7 @@ def list_player_matches(
 
 @router.get(
     "/players/{player_external_id}/matches/{match_id}",
-    response_model=MatchDetailOut,
+    response_model=MatchSummaryOut,
 )
 def get_player_match_detail(
     player_external_id: str,
@@ -96,42 +92,7 @@ def get_player_match_detail(
 
     # Build summary
     summary = _match_to_summary(match, db)
-
-    # Build rounds detail
-    rounds = (
-        db.query(MatchRound)
-        .filter(MatchRound.match_id == match.id)
-        .order_by(MatchRound.round_number)
-        .all()
-    )
-
-    round_out_list: List[MatchRoundOut] = []
-    for r in rounds:
-        p1_card = db.get(Card, r.player1_card_id)
-        p2_card = db.get(Card, r.player2_card_id)
-
-        if p1_card is None or p2_card is None:
-            # If something is wrong in DB, skip this round rather than crash
-            continue
-
-        winner_external_id = None
-        if r.winner_id is not None:
-            w = db.get(PlayerProfile, r.winner_id)
-            winner_external_id = w.external_id if w else None
-
-        round_out_list.append(
-            MatchRoundOut(
-                round_number=r.round_number,
-                player1_card=CardOut.model_validate(p1_card),
-                player2_card=CardOut.model_validate(p2_card),
-                winner_external_id=winner_external_id,
-            )
-        )
-
-    return MatchDetailOut(
-        **summary.dict(),
-        rounds=round_out_list,
-    )
+    return summary
 
 
 @router.get("/leaderboard", response_model=List[LeaderboardEntry])

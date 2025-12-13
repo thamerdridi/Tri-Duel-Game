@@ -105,20 +105,6 @@ Get a specific card by ID.
   "winner_external_id": "user123",
   "player1_score": 3,
   "player2_score": 2,
-  "rounds": [
-    {
-      "round_number": 1,
-      "player1_card_id": 1,
-      "player2_card_id": 2,
-      "winner_external_id": "user123"
-    },
-    {
-      "round_number": 2,
-      "player1_card_id": 3,
-      "player2_card_id": 4,
-      "winner_external_id": "user456"
-    }
-  ],
   "seed": "optional-random-seed"
 }
 ```
@@ -133,7 +119,6 @@ Get a specific card by ID.
 **Notes:**
 - Players are auto-created if they don't exist
 - `winner_external_id` can be `null` for draws
-- Round `winner_external_id` can also be `null` for round draws
 
 ---
 
@@ -153,7 +138,6 @@ Get all matches for a specific player.
     "winner_external_id": "user123",
     "player1_score": 3,
     "player2_score": 2,
-    "rounds_played": 5,
     "created_at": "2025-11-21T10:00:00",
     "finished_at": null
   }
@@ -162,7 +146,7 @@ Get all matches for a specific player.
 
 **`GET /players/{external_id}/matches/{match_id}`**
 
-Get detailed match information including all rounds and cards played.
+Get match information by ID.
 
 **Response:**
 ```json
@@ -173,29 +157,8 @@ Get detailed match information including all rounds and cards played.
   "winner_external_id": "user123",
   "player1_score": 3,
   "player2_score": 2,
-  "rounds_played": 5,
   "created_at": "2025-11-21T10:00:00",
-  "finished_at": null,
-  "rounds": [
-    {
-      "round_number": 1,
-      "player1_card": {
-        "id": 1,
-        "category": "rock",
-        "power": 1,
-        "name": "Rock 1",
-        "description": null
-      },
-      "player2_card": {
-        "id": 2,
-        "category": "paper",
-        "power": 1,
-        "name": "Paper 1",
-        "description": null
-      },
-      "winner_external_id": "user456"
-    }
-  ]
+  "finished_at": null
 }
 ```
 
@@ -268,9 +231,6 @@ player_service/
 
 **`matches`**
 - Match results with scores and winner
-
-**`match_rounds`**
-- Individual round data with cards played
 
 ## Integration with Other Services
 

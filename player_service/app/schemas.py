@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -36,25 +36,6 @@ class CardOut(BaseModel):
         from_attributes = True
 
 
-# ========= Match rounds =========
-
-class MatchRoundCreate(BaseModel):
-    round_number: int
-    player1_card_id: int
-    player2_card_id: int
-    winner_external_id: Optional[str] = None  # None = draw
-
-
-class MatchRoundOut(BaseModel):
-    round_number: int
-    player1_card: CardOut
-    player2_card: CardOut
-    winner_external_id: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
-
 # ========= Matches (history) =========
 
 class MatchSummaryOut(BaseModel):
@@ -64,16 +45,11 @@ class MatchSummaryOut(BaseModel):
     winner_external_id: Optional[str]
     player1_score: int
     player2_score: int
-    rounds_played: int
     created_at: datetime
     finished_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
-
-
-class MatchDetailOut(MatchSummaryOut):
-    rounds: List[MatchRoundOut]
 
 
 class MatchCreate(BaseModel):
@@ -85,7 +61,6 @@ class MatchCreate(BaseModel):
     winner_external_id: Optional[str] = None
     player1_score: int
     player2_score: int
-    rounds: List[MatchRoundCreate]
     seed: Optional[str] = None
 
 

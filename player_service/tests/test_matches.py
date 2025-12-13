@@ -46,12 +46,14 @@ def test_create_match_missing_required_fields(client):
     assert response.status_code == 422  # Validation error
 
 
-def test_create_match_with_invalid_card_ids(client, sample_match_data):
-    """Test creating a match with non-existent card IDs."""
-    sample_match_data["rounds"][0]["player1_card_id"] = 999
-    
-    response = client.post("/matches", json=sample_match_data)
-    # Should still accept it (we trust Game Service)
+def test_create_match_ignores_rounds_field(client, sample_match_data):
+    """Test that legacy/extra 'rounds' field does not break match creation."""
+    payload = {
+        **sample_match_data,
+        "rounds": None,
+    }
+
+    response = client.post("/matches", json=payload)
     assert response.status_code == 201
 
 
@@ -79,7 +81,7 @@ def test_get_player_matches_empty(client):
 
 
 def test_get_match_detail(client, sample_match_data):
-    """Test retrieving detailed match information with rounds."""
+    """Test retrieving match information by ID."""
     # Create a match
     create_response = client.post("/matches", json=sample_match_data)
     match_id = create_response.json()["id"]
@@ -91,15 +93,6 @@ def test_get_match_detail(client, sample_match_data):
     match = response.json()
     assert match["id"] == match_id
     assert match["player1_external_id"] == "alice"
-    assert "rounds" in match
-    assert len(match["rounds"]) == 3
-    
-    # Check round details
-    round1 = match["rounds"][0]
-    assert round1["round_number"] == 1
-    assert "player1_card" in round1
-    assert "player2_card" in round1
-    assert round1["player1_card"]["id"] == 1
 
 
 def test_get_match_detail_not_found(client):
@@ -134,18 +127,3 @@ def test_multiple_matches_same_players(client, sample_match_data):
     response = client.get("/players/alice/matches")
     assert response.status_code == 200
     assert len(response.json()) == 2
-
-
-def test_round_with_draw(client, sample_match_data):
-    """Test creating a match with a round that ended in a draw."""
-    sample_match_data["rounds"][0]["winner_external_id"] = None
-    
-    response = client.post("/matches", json=sample_match_data)
-    assert response.status_code == 201
-    
-    # Verify the round draw is stored correctly
-    match_id = response.json()["id"]
-    detail_response = client.get(f"/players/alice/matches/{match_id}")
-    
-    match = detail_response.json()
-    assert match["rounds"][0]["winner_external_id"] is None

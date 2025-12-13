@@ -76,25 +76,5 @@ def sample_match_data():
         "winner_external_id": "alice",
         "player1_score": 3,
         "player2_score": 2,
-        "rounds": [
-            {
-                "round_number": 1,
-                "player1_card_id": 1,
-                "player2_card_id": 2,
-                "winner_external_id": "alice"
-            },
-            {
-                "round_number": 2,
-                "player1_card_id": 3,
-                "player2_card_id": 4,
-                "winner_external_id": "bob"
-            },
-            {
-                "round_number": 3,
-                "player1_card_id": 5,
-                "player2_card_id": 6,
-                "winner_external_id": "alice"
-            }
-        ],
         "seed": "test-seed-123"
     }

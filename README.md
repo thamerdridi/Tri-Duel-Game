@@ -155,14 +155,6 @@ curl -X POST http://localhost:8002/matches \
     "winner_external_id": "player1",
     "player1_score": 3,
     "player2_score": 2,
-    "rounds": [
-      {
-        "round_number": 1,
-        "player1_card_id": 1,
-        "player2_card_id": 7,
-        "winner_external_id": "player1"
-      }
-    ],
     "seed": "12345"
   }'
 ```
