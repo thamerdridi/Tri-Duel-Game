@@ -1,6 +1,6 @@
 # Tri-Duel Player Service
 
-Cards catalog + player profiles + match history + leaderboard.
+Player profiles + match history + leaderboard.
 
 ## Run
 
@@ -25,7 +25,6 @@ docker compose up --build
 ## Endpoints
 
 - `GET /health` (public)
-- `GET /cards`, `GET /cards/{id}` (public)
 - `POST /players`, `GET /players/me` (JWT required; token validated via Auth Service)
 - `GET /players/{external_id}/matches`, `GET /players/{external_id}/matches/{match_id}` (public; match details include ordered `turns`)
 - `GET /leaderboard` (public)

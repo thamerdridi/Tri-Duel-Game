@@ -16,15 +16,6 @@ class PlayerProfileUpdate(BaseModel):
     username: Optional[str] = None
 
 
-class CardOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    category: str
-    power: int
-    name: str
-
-
 class MatchSummaryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

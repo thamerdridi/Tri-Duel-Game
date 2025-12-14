@@ -88,28 +88,6 @@ paths:
         "200":
           description: Service OK
 
-  /cards:
-    get:
-      summary: List all cards (public)
-      tags: [Player]
-      responses:
-        "200":
-          description: A list of cards
-
-  /cards/{card_id}:
-    get:
-      summary: Get card details (public)
-      tags: [Player]
-      parameters:
-        - name: card_id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: Card details
-
   /players:
     post:
       summary: Create or update my profile

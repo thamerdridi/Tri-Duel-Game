@@ -22,15 +22,6 @@ class PlayerProfile(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
-class Card(Base):
-    __tablename__ = "cards"
-
-    id = Column(Integer, primary_key=True, index=True)
-    category = Column(String(16), nullable=False)  # "rock" | "paper" | "scissors"
-    power = Column(SmallInteger, nullable=False)
-    name = Column(String(50), nullable=False)
-
-
 class Match(Base):
     __tablename__ = "matches"
 

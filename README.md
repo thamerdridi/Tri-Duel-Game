@@ -23,7 +23,7 @@ Auth Service (8001) → JWT tokens → Player Service (8002)
 ```
 
 - **Auth**: User registration, login, token validation
-- **Player**: Profiles, cards, match history, leaderboard  
+- **Player**: Profiles, match history, leaderboard  
 - **Game**: Match logic, RPS engine, rounds
 
 Postman collections (service-level API tests) live under each service folder, e.g. `player_service/postman/player_service.postman_collection.json`.
@@ -99,10 +99,10 @@ curl -X POST http://localhost:8002/players \
 ### Step 3: View Available Cards
 
 ```bash
-curl http://localhost:8002/cards
+curl http://localhost:8003/cards
 ```
 
-Note card IDs (1-18). Cards have categories (Rock/Paper/Scissors) and power (10-60).
+This endpoint returns an SVG. Open it in a browser for the full deck view, and use `/cards/{id}` for single-card view.
 
 ### Step 4: Start a Match
 
@@ -215,8 +215,6 @@ GET  /health         - Health check
 
 ### Player Service (Port 8002)
 ```
-GET  /cards                        - List all cards (public)
-GET  /cards/{id}                   - Get card details (public)
 POST /players                      - Create/update my profile (protected)
 GET  /players/me                   - Get my profile (protected)
 POST /matches                      - Create match record (internal, Game Service only)

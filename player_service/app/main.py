@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 
-from .db import Base, engine, SessionLocal
-from . import models
-from .routers import card, players, matches
+from .db import Base, engine
+from .routers import players, matches
 
 
 app = FastAPI(
@@ -11,43 +10,12 @@ app = FastAPI(
 )
 
 
-def seed_cards() -> None:
-    """
-    Seed the 18 Tri-Duel cards if the cards table is empty.
-    """
-    db = SessionLocal()
-    try:
-        count = db.query(models.Card).count()
-        if count > 0:
-            return
-
-        deck = {
-            "rock":     [1, 2, 3, 4, 6, 9],
-            "paper":    [1, 2, 3, 5, 7, 9],
-            "scissors": [1, 2, 4, 5, 7, 8],
-        }
-
-        for category, powers in deck.items():
-            for power in powers:
-                card = models.Card(
-                    category=category,
-                    power=power,
-                    name=f"{category.capitalize()} {power}",
-                )
-                db.add(card)
-
-        db.commit()
-    finally:
-        db.close()
-
-
 @app.on_event("startup")
 def on_startup() -> None:
     import os
     if os.getenv("TESTING"):
         return
     Base.metadata.create_all(bind=engine)
-    seed_cards()
 
 
 @app.get("/health")
@@ -55,6 +23,5 @@ def health_check() -> dict:
     return {"status": "ok"}
 
 
-app.include_router(card.router)
 app.include_router(players.router)
 app.include_router(matches.router)
