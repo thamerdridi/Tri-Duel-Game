@@ -297,6 +297,24 @@
           ]
         },
         {
+          "name": "Post match (invalid - user token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{player1_token}}" }
+            ],
+            "url": { "raw": "{{player_base_url}}/matches", "host": ["{{player_base_url}}"], "path": ["matches"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"player1_external_id\":\"{{player1_username}}\",\"player2_external_id\":\"{{player2_username}}\",\"winner_external_id\":\"{{player1_username}}\",\"player1_score\":1,\"player2_score\":0,\"external_match_id\":\"pm-match-403\",\"turns\":[]}"
+            }
+          },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('User token returns 403', function () { pm.response.to.have.status(403); });"] } }
+          ]
+        },
+        {
           "name": "List player1 matches (valid)",
           "request": { "method": "GET", "url": { "raw": "{{player_base_url}}/players/{{player1_username}}/matches", "host": ["{{player_base_url}}"], "path": ["players", "{{player1_username}}", "matches"] } },
           "event": [
