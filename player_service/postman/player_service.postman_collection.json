@@ -1,0 +1,376 @@
+{
+  "info": {
+    "name": "Tri-Duel - Player Service (Postman Tests)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Unit-style API tests for Player Service (and Auth Service for tokens). Set collection variables `auth_base_url` and `player_base_url` to match your deployment. If using self-signed HTTPS, disable SSL verification in Postman."
+  },
+  "variable": [
+    { "key": "auth_base_url", "value": "http://localhost:8001" },
+    { "key": "player_base_url", "value": "https://localhost:8000" },
+    { "key": "player1_username", "value": "player1" },
+    { "key": "player2_username", "value": "player2" },
+    { "key": "game_service_username", "value": "game_service" },
+    { "key": "password", "value": "pass123" },
+    { "key": "player1_token", "value": "" },
+    { "key": "player2_token", "value": "" },
+    { "key": "game_service_token", "value": "" },
+    { "key": "match_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Setup (Auth Service)",
+      "item": [
+        {
+          "name": "Register player1 (valid)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{auth_base_url}}/auth/register", "host": ["{{auth_base_url}}"], "path": ["auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{player1_username}}\",\"email\":\"player1@test.com\",\"password\":\"{{password}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Register returns 200 or 400 (already exists)', function () {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register player2 (valid)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{auth_base_url}}/auth/register", "host": ["{{auth_base_url}}"], "path": ["auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{player2_username}}\",\"email\":\"player2@test.com\",\"password\":\"{{password}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Register returns 200 or 400 (already exists)', function () {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register game_service (valid)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{auth_base_url}}/auth/register", "host": ["{{auth_base_url}}"], "path": ["auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{game_service_username}}\",\"email\":\"game_service@test.com\",\"password\":\"{{password}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Register returns 200 or 400 (already exists)', function () {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login player1 (valid)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{auth_base_url}}/auth/login", "host": ["{{auth_base_url}}"], "path": ["auth", "login"] },
+            "body": { "mode": "raw", "raw": "{\"username\":\"{{player1_username}}\",\"password\":\"{{password}}\"}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login returns 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('player1_token', json.access_token);",
+                  "pm.test('Token present', function () { pm.expect(json.access_token).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login player2 (valid)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{auth_base_url}}/auth/login", "host": ["{{auth_base_url}}"], "path": ["auth", "login"] },
+            "body": { "mode": "raw", "raw": "{\"username\":\"{{player2_username}}\",\"password\":\"{{password}}\"}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login returns 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('player2_token', json.access_token);",
+                  "pm.test('Token present', function () { pm.expect(json.access_token).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login game_service (valid)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{auth_base_url}}/auth/login", "host": ["{{auth_base_url}}"], "path": ["auth", "login"] },
+            "body": { "mode": "raw", "raw": "{\"username\":\"{{game_service_username}}\",\"password\":\"{{password}}\"}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login returns 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('game_service_token', json.access_token);",
+                  "pm.test('Token present', function () { pm.expect(json.access_token).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Player Service",
+      "item": [
+        {
+          "name": "Health (valid)",
+          "request": { "method": "GET", "url": { "raw": "{{player_base_url}}/health", "host": ["{{player_base_url}}"], "path": ["health"] } },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["pm.test('Health returns 200', function () { pm.response.to.have.status(200); });"] }
+            }
+          ]
+        },
+        {
+          "name": "Health (invalid path)",
+          "request": { "method": "GET", "url": { "raw": "{{player_base_url}}/healthx", "host": ["{{player_base_url}}"], "path": ["healthx"] } },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["pm.test('Invalid path returns 404', function () { pm.response.to.have.status(404); });"] }
+            }
+          ]
+        },
+        {
+          "name": "List cards (valid)",
+          "request": { "method": "GET", "url": { "raw": "{{player_base_url}}/cards", "host": ["{{player_base_url}}"], "path": ["cards"] } },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Cards returns 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Cards is an array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get card by id (valid)",
+          "request": { "method": "GET", "url": { "raw": "{{player_base_url}}/cards/1", "host": ["{{player_base_url}}"], "path": ["cards", "1"] } },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["pm.test('Card returns 200', function () { pm.response.to.have.status(200); });"] }
+            }
+          ]
+        },
+        {
+          "name": "Get card by id (invalid)",
+          "request": { "method": "GET", "url": { "raw": "{{player_base_url}}/cards/999999", "host": ["{{player_base_url}}"], "path": ["cards", "999999"] } },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Missing card returns 404', function () { pm.response.to.have.status(404); });"] } }
+          ]
+        },
+        {
+          "name": "Create profile player1 (valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{player1_token}}" }
+            ],
+            "url": { "raw": "{{player_base_url}}/players", "host": ["{{player_base_url}}"], "path": ["players"] },
+            "body": { "mode": "raw", "raw": "{\"username\":\"{{player1_username}}\"}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create profile returns 200 or 201', function () { pm.expect([200,201]).to.include(pm.response.code); });",
+                  "pm.test('Profile has external_id', function () { pm.expect(pm.response.json().external_id).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create profile player1 (invalid - missing auth)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{player_base_url}}/players", "host": ["{{player_base_url}}"], "path": ["players"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Missing auth returns 401', function () { pm.response.to.have.status(401); });"] } }
+          ]
+        },
+        {
+          "name": "Create profile player2 (valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{player2_token}}" }
+            ],
+            "url": { "raw": "{{player_base_url}}/players", "host": ["{{player_base_url}}"], "path": ["players"] },
+            "body": { "mode": "raw", "raw": "{\"username\":\"{{player2_username}}\"}" }
+          },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Create profile returns 200 or 201', function () { pm.expect([200,201]).to.include(pm.response.code); });"] } }
+          ]
+        },
+        {
+          "name": "Get my profile (valid)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{player1_token}}" }
+            ],
+            "url": { "raw": "{{player_base_url}}/players/me", "host": ["{{player_base_url}}"], "path": ["players", "me"] }
+          },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Get my profile returns 200', function () { pm.response.to.have.status(200); });"] } }
+          ]
+        },
+        {
+          "name": "Get my profile (invalid - missing auth)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{player_base_url}}/players/me", "host": ["{{player_base_url}}"], "path": ["players", "me"] }
+          },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Missing auth returns 401', function () { pm.response.to.have.status(401); });"] } }
+          ]
+        },
+        {
+          "name": "Post match (valid - Game Service token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{game_service_token}}" }
+            ],
+            "url": { "raw": "{{player_base_url}}/matches", "host": ["{{player_base_url}}"], "path": ["matches"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"player1_external_id\":\"{{player1_username}}\",\"player2_external_id\":\"{{player2_username}}\",\"winner_external_id\":\"{{player1_username}}\",\"player1_score\":3,\"player2_score\":2,\"external_match_id\":\"pm-match-1\",\"turns\":[{\"turn_number\":1,\"player1_card_id\":1,\"player2_card_id\":2,\"winner_external_id\":\"{{player1_username}}\"}]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Match ingest returns 201', function () { pm.response.to.have.status(201); });",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('match_id', json.id);",
+                  "pm.test('Match id present', function () { pm.expect(json.id).to.be.a('number'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Post match (invalid - missing auth)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{player_base_url}}/matches", "host": ["{{player_base_url}}"], "path": ["matches"] },
+            "body": { "mode": "raw", "raw": "{\"player1_external_id\":\"{{player1_username}}\",\"player2_external_id\":\"{{player2_username}}\",\"winner_external_id\":null,\"player1_score\":0,\"player2_score\":0,\"external_match_id\":\"pm-match-x\"}" }
+          },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Missing auth returns 401', function () { pm.response.to.have.status(401); });"] } }
+          ]
+        },
+        {
+          "name": "List player1 matches (valid)",
+          "request": { "method": "GET", "url": { "raw": "{{player_base_url}}/players/{{player1_username}}/matches", "host": ["{{player_base_url}}"], "path": ["players", "{{player1_username}}", "matches"] } },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Matches list returns 200', function () { pm.response.to.have.status(200); });"] } }
+          ]
+        },
+        {
+          "name": "List matches (invalid player)",
+          "request": { "method": "GET", "url": { "raw": "{{player_base_url}}/players/no_such_user/matches", "host": ["{{player_base_url}}"], "path": ["players", "no_such_user", "matches"] } },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Missing player returns 404', function () { pm.response.to.have.status(404); });"] } }
+          ]
+        },
+        {
+          "name": "Match detail (valid)",
+          "request": { "method": "GET", "url": { "raw": "{{player_base_url}}/players/{{player1_username}}/matches/{{match_id}}", "host": ["{{player_base_url}}"], "path": ["players", "{{player1_username}}", "matches", "{{match_id}}"] } },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Match detail returns 200', function () { pm.response.to.have.status(200); });"] } }
+          ]
+        },
+        {
+          "name": "Match detail (invalid match id)",
+          "request": { "method": "GET", "url": { "raw": "{{player_base_url}}/players/{{player1_username}}/matches/999999", "host": ["{{player_base_url}}"], "path": ["players", "{{player1_username}}", "matches", "999999"] } },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Missing match returns 404', function () { pm.response.to.have.status(404); });"] } }
+          ]
+        },
+        {
+          "name": "Leaderboard (valid)",
+          "request": { "method": "GET", "url": { "raw": "{{player_base_url}}/leaderboard", "host": ["{{player_base_url}}"], "path": ["leaderboard"] } },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Leaderboard returns 200', function () { pm.response.to.have.status(200); });"] } }
+          ]
+        },
+        {
+          "name": "Leaderboard (invalid path)",
+          "request": { "method": "GET", "url": { "raw": "{{player_base_url}}/leaderboardx", "host": ["{{player_base_url}}"], "path": ["leaderboardx"] } },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Invalid path returns 404', function () { pm.response.to.have.status(404); });"] } }
+          ]
+        }
+      ]
+    }
+  ]
+}

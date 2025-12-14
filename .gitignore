@@ -27,6 +27,7 @@ ENV/
 htmlcov/
 *.db
 test.db
+file:memdb*
 
 # OS
 .DS_Store

@@ -33,7 +33,6 @@ def seed_cards() -> None:
                     category=category,
                     power=power,
                     name=f"{category.capitalize()} {power}",
-                    description=None,
                 )
                 db.add(card)
 
@@ -44,13 +43,10 @@ def seed_cards() -> None:
 
 @app.on_event("startup")
 def on_startup() -> None:
-    # Skip database initialization during testing
     import os
     if os.getenv("TESTING"):
         return
-    # Create tables
     Base.metadata.create_all(bind=engine)
-    # Seed deck
     seed_cards()
 
 
@@ -59,7 +55,6 @@ def health_check() -> dict:
     return {"status": "ok"}
 
 
-# Attach feature routers explicitly
 app.include_router(card.router)
 app.include_router(players.router)
 app.include_router(matches.router)

@@ -1,1 +1,1 @@
-# Package marker for app module
+"""Player Service application package."""

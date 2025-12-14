@@ -26,6 +26,8 @@ Auth Service (8001) → JWT tokens → Player Service (8002)
 - **Player**: Profiles, cards, match history, leaderboard  
 - **Game**: Match logic, RPS engine, rounds
 
+Postman collections (service-level API tests) live under each service folder, e.g. `player_service/postman/player_service.postman_collection.json`.
+
 ## Prerequisites
 
 - Docker
@@ -84,6 +86,15 @@ curl -X POST http://localhost:8001/auth/login \
 ```
 
 Copy the `access_token` from the response.
+
+### Step 2.1: Create Player Service Profile (once per user)
+
+```bash
+curl -X POST http://localhost:8002/players \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "player1"}'
+```
 
 ### Step 3: View Available Cards
 
@@ -148,6 +159,7 @@ After a match completes, record it in the Player Service for leaderboard trackin
 ```bash
 # Manually submit match result to Player Service
 curl -X POST http://localhost:8002/matches \
+  -H "Authorization: Bearer GAME_SERVICE_JWT" \
   -H "Content-Type: application/json" \
   -d '{
     "player1_external_id": "player1",
@@ -155,6 +167,7 @@ curl -X POST http://localhost:8002/matches \
     "winner_external_id": "player1",
     "player1_score": 3,
     "player2_score": 2,
+    "external_match_id": "MATCH_ID_HERE",
     "seed": "12345"
   }'
 ```

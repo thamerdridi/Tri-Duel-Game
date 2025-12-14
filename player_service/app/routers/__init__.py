@@ -1,1 +1,1 @@
-# Package marker for routers module
+"""API routers."""

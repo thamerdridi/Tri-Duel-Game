@@ -29,6 +29,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 Service will be available at: http://localhost:8000
 
+If you changed the DB schema and want a fresh dev database, delete `players.db` and restart the service.
+
+## Postman Tests
+
+Assignment Postman collection is available at `postman/player_service.postman_collection.json`.
+If running over self-signed HTTPS, disable SSL verification in Postman (or use `--insecure` with Newman).
+
 ### With Docker & PostgreSQL
 
 ```bash
@@ -36,7 +43,16 @@ cd player_service
 docker compose up --build
 ```
 
-Service will be available at: http://localhost:8000
+Service will be available at: https://localhost:8000 (self-signed)
+
+If you changed the DB schema and just want a fresh dev database:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+If your system uses `docker-compose` (v1), replace `docker compose` with `docker-compose`.
 
 ## API Endpoints
 
@@ -55,6 +71,16 @@ Check if the service is running.
 
 ---
 
+### Player Profiles
+
+**`GET /players/me`**
+
+Get the current user's profile.
+
+**Auth:** Requires `Authorization: Bearer <jwt>`.
+
+---
+
 ### Cards
 
 **`GET /cards`**
@@ -68,8 +94,7 @@ Get all 18 Tri-Duel cards.
     "id": 1,
     "category": "rock",
     "power": 1,
-    "name": "Rock 1",
-    "description": null
+    "name": "Rock 1"
   },
 ]
 ```
@@ -85,9 +110,25 @@ Get a specific card by ID.
   "category": "rock",
   "power": 1,
   "name": "Rock 1",
-  "description": null
 }
 ```
+
+### Player Profiles
+
+**`POST /players`**
+
+Create (or update) the Player Service profile for the authenticated user.
+
+**Auth:** Requires `Authorization: Bearer <jwt>` (validated via Auth Service).
+
+**Request Body:**
+```json
+{
+  "username": "optional-display-name"
+}
+```
+
+**Response:** Player profile.
 
 ---
 
@@ -97,6 +138,8 @@ Get a specific card by ID.
 
  **Called by Game Service** when a match finishes.
 
+**Auth:** Requires `Authorization: Bearer <jwt>` for a token whose `sub` matches `GAME_SERVICE_SUBJECT` (default: `game_service`).
+
 **Request Body:**
 ```json
 {
@@ -105,7 +148,8 @@ Get a specific card by ID.
   "winner_external_id": "user123",
   "player1_score": 3,
   "player2_score": 2,
-  "seed": "optional-random-seed"
+  "external_match_id": "game-service-match-id",
+  "turns": []
 }
 ```
 
@@ -117,8 +161,10 @@ Get a specific card by ID.
 ```
 
 **Notes:**
-- Players are auto-created if they don't exist
 - `winner_external_id` can be `null` for draws
+- `external_match_id` is used for idempotency (duplicate posts with the same id won't create duplicate matches)
+- Players referenced in a match must already exist in `player_profiles` (create them via `POST /players`).
+- Match details include the ordered `turns` list (sequence of moves).
 
 ---
 
@@ -133,13 +179,13 @@ Get all matches for a specific player.
 [
   {
     "id": 1,
+    "external_match_id": "game-service-match-id",
     "player1_external_id": "user123",
     "player2_external_id": "user456",
     "winner_external_id": "user123",
     "player1_score": 3,
     "player2_score": 2,
     "created_at": "2025-11-21T10:00:00",
-    "finished_at": null
   }
 ]
 ```
@@ -152,13 +198,14 @@ Get match information by ID.
 ```json
 {
   "id": 1,
+  "external_match_id": "game-service-match-id",
   "player1_external_id": "user123",
   "player2_external_id": "user456",
   "winner_external_id": "user123",
   "player1_score": 3,
   "player2_score": 2,
   "created_at": "2025-11-21T10:00:00",
-  "finished_at": null
+  "turns": []
 }
 ```
 
@@ -224,7 +271,7 @@ player_service/
 ### Tables
 
 **`player_profiles`**
-- Stores player information (auto-created on first match)
+- Stores player information
 
 **`cards`**
 - 18 predefined Tri-Duel cards (seeded on startup)

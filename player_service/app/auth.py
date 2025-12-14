@@ -1,26 +1,15 @@
-"""Authentication utilities for Player Service."""
 import os
 from typing import Optional
-from fastapi import Header, HTTPException, status
+
 import httpx
+from fastapi import Header, HTTPException, status
 
 
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
+GAME_SERVICE_SUBJECT = os.getenv("GAME_SERVICE_SUBJECT", "game_service")
 
 
 async def verify_token(authorization: Optional[str] = Header(None)) -> dict:
-    """
-    Verify JWT token with Auth Service.
-    
-    Args:
-        authorization: Bearer token from request header
-        
-    Returns:
-        dict: Decoded token payload with user info
-        
-    Raises:
-        HTTPException: If token is invalid or missing
-    """
     if not authorization:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -32,9 +21,9 @@ async def verify_token(authorization: Optional[str] = Header(None)) -> dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authorization header format"
         )
-    
-    token = authorization.split(" ")[1]
-    
+
+    token = authorization.split(" ", 1)[1]
+
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -42,14 +31,13 @@ async def verify_token(authorization: Optional[str] = Header(None)) -> dict:
                 params={"token": token},
                 timeout=5.0
             )
-            
+
         if response.status_code == 200:
             return response.json()
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired token"
-            )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
     except httpx.RequestError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -57,28 +45,24 @@ async def verify_token(authorization: Optional[str] = Header(None)) -> dict:
         )
 
 
+async def require_game_service_jwt(authorization: Optional[str] = Header(None)) -> dict:
+    payload = await verify_token(authorization)
+    if payload.get("sub") != GAME_SERVICE_SUBJECT:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
+        )
+    return payload
+
+
 async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
-    """
-    Get current authenticated user.
-    Use this as a dependency in protected routes.
-    
-    Example:
-        @router.get("/protected")
-        async def protected_route(user: dict = Depends(get_current_user)):
-            return {"user": user["sub"]}
-    """
     return await verify_token(authorization)
 
 
-# Optional: For routes that don't require auth but benefit from knowing if user is logged in
 async def get_optional_user(authorization: Optional[str] = Header(None)) -> Optional[dict]:
-    """
-    Get current user if token is provided, otherwise return None.
-    Use for optional authentication.
-    """
     if not authorization:
         return None
-    
+
     try:
         return await verify_token(authorization)
     except HTTPException:
