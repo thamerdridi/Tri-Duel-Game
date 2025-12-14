@@ -68,8 +68,8 @@ def create_match(
             MatchTurn(
                 match_id=match.id,
                 turn_number=t.turn_number,
-                player1_card_id=t.player1_card_id,
-                player2_card_id=t.player2_card_id,
+                player1_card_name=t.player1_card_name,
+                player2_card_name=t.player2_card_name,
                 winner_id=turn_winner_id,
             )
         )

@@ -31,15 +31,15 @@ class MatchSummaryOut(BaseModel):
 
 class MatchTurnCreate(BaseModel):
     turn_number: int
-    player1_card_id: int
-    player2_card_id: int
+    player1_card_name: str
+    player2_card_name: str
     winner_external_id: Optional[str] = None
 
 
 class MatchTurnOut(BaseModel):
     turn_number: int
-    player1_card_id: int
-    player2_card_id: int
+    player1_card_name: str
+    player2_card_name: str
     winner_external_id: Optional[str] = None
 
 

@@ -168,7 +168,9 @@ curl -X POST http://localhost:8002/matches \
     "player1_score": 3,
     "player2_score": 2,
     "external_match_id": "MATCH_ID_HERE",
-    "turns": []
+    "turns": [
+      { "turn_number": 1, "player1_card_name": "Rock 1", "player2_card_name": "Paper 2", "winner_external_id": "player2" }
+    ]
   }'
 ```
 

@@ -171,8 +171,8 @@ def get_player_match_detail(
         turn_out.append(
             MatchTurnOut(
                 turn_number=t.turn_number,
-                player1_card_id=t.player1_card_id,
-                player2_card_id=t.player2_card_id,
+                player1_card_name=t.player1_card_name,
+                player2_card_name=t.player2_card_name,
                 winner_external_id=winner_external_id,
             )
         )
