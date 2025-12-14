@@ -1,10 +1,11 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from sqlalchemy import or_
 import logging
 import asyncio
 
 from game_app.configs.cards_config import DOMAIN_CARDS
-from game_app.database.models import Match, MatchCard, CardDefinition
+from game_app.database.models import Match, MatchCard, CardDefinition, MatchRound
 from game_app.configs.logic_configs import MAX_ROUNDS
 from game_app.configs.logging_config import log_if_enabled
 from game_app.logic.models import Card
@@ -24,6 +25,29 @@ class MatchService:
     # CREATE MATCH
     # ============================================================
     def create_match(self, player1_id: str, player2_id: str):
+        # Prevent creating a new match if either player already has an active match
+        active_p1 = (
+            self.db.query(Match)
+            .filter(
+                or_(Match.player1_id == player1_id, Match.player2_id == player1_id),
+                Match.status == "in_progress",
+            )
+            .first()
+        )
+        if active_p1:
+            raise ValueError(f"Player already in an active match: {player1_id}")
+
+        active_p2 = (
+            self.db.query(Match)
+            .filter(
+                or_(Match.player1_id == player2_id, Match.player2_id == player2_id),
+                Match.status == "in_progress",
+            )
+            .first()
+        )
+        if active_p2:
+            raise ValueError(f"Player already in an active match: {player2_id}")
+
         card_defs = (
             self.db.query(CardDefinition)
             .filter(CardDefinition.active == True)
@@ -184,6 +208,19 @@ class MatchService:
 
         result = rps_outcome(card1, card2)
 
+        # Create MatchRound record
+        match_round = MatchRound(
+            match_id=match.id,
+            match_card_p1=card_p1.id,
+            match_card_p2=card_p2.id,
+            winner_id=(match.player1_id if result.winner == "p1" else
+                        match.player2_id if result.winner == "p2" else None),
+            round_number=match.current_round,
+            reason=result.reason,
+        )
+
+        self.db.add(match_round)
+
         if result.winner == "p1":
             match.points_p1 += 1
         elif result.winner == "p2":
@@ -233,7 +270,9 @@ class MatchService:
                         winner_id=match.winner,
                         points_p1=match.points_p1,
                         points_p2=match.points_p2,
-                        status=match.status
+                        status=match.status,
+                        turns=self._format_rounds_for_player(match.id),
+                        external_match_id=match.id,
                     )
                 )
             except RuntimeError:
@@ -252,6 +291,48 @@ class MatchService:
             "match_finished": match.status == "finished",
             "match_winner": match.winner,
         }
+
+    def _get_match_rounds(self, match_id: str):
+        rounds = (
+            self.db.query(MatchRound)
+            .filter_by(match_id=match_id)
+            .order_by(MatchRound.round_number)
+            .all()
+        )
+        return rounds
+
+    def _format_rounds_for_player(self, match_id: str):
+        """Format MatchRound records into payloads expected by Player Service.
+
+        - Builds card names from CardDefinition: "{category}_{power}"
+        - winner_id is already stored as external_id in MatchRound.winner_id
+        """
+        # Iterate MatchRound records and fetch related MatchCard and CardDefinition
+        formatted = []
+        match_rounds = self._get_match_rounds(match_id)
+        for r in match_rounds:
+            # fetch match cards
+            mc_p1 = self.db.get(MatchCard, r.match_card_p1)
+            mc_p2 = self.db.get(MatchCard, r.match_card_p2)
+
+            # fetch card definitions
+            cd_p1 = self.db.get(CardDefinition, mc_p1.card_def_id) if mc_p1 else None
+            cd_p2 = self.db.get(CardDefinition, mc_p2.card_def_id) if mc_p2 else None
+
+            name_p1 = f"{cd_p1.category} {cd_p1.power}" if cd_p1 else ""
+            name_p2 = f"{cd_p2.category} {cd_p2.power}" if cd_p2 else ""
+
+            # In game_service MatchRound.winner_id stores external player id (string) or None
+            winner_external_id = r.winner_id
+
+            formatted.append({
+                "turn_number": r.round_number,
+                "player1_card_name": name_p1,
+                "player2_card_name": name_p2,
+                "winner_external_id": winner_external_id,
+            })
+
+        return formatted
 
     # ============================================================
     # GET PLAYER CARDS (universal method)
@@ -361,4 +442,63 @@ class MatchService:
             "match_winner": match.winner,
         }
 
+    # ============================================================
+    # GET ACTIVE MATCHES FOR PLAYER
+    # ============================================================
+    def get_active_matches(self, player_id: str):
+        """Retrieve all active matches for a given player."""
+        active_matches = (
+            self.db.query(Match)
+            .filter(
+                or_(Match.player1_id == player_id, Match.player2_id == player_id),
+                Match.status == "in_progress",
+            )
+            .all()
+        )
+        return active_matches
 
+    # ============================================================
+    # SURRENDER MATCH
+    # ============================================================
+    def surrender_match(self, match_id: str, player_id: str):
+        """Mark the match as surrendered by the given player."""
+        match = self.db.query(Match).filter_by(id=match_id).first()
+        if not match:
+            raise ValueError("Match not found")
+
+        if match.status != "in_progress":
+            raise ValueError("Match is not active")
+
+        if match.player1_id == player_id:
+            match.winner = match.player2_id
+        elif match.player2_id == player_id:
+            match.winner = match.player1_id
+        else:
+            raise ValueError("Player is not part of this match")
+
+        match.status = "finished"
+        self.db.commit()
+        self.db.refresh(match)
+
+        # Notify player service about the surrendered match
+        try:
+            asyncio.create_task(
+                player_client.finalize_match(
+                    match_id=match.id,
+                    player1_id=match.player1_id,
+                    player2_id=match.player2_id,
+                    winner_id=match.winner,
+                    points_p1=match.points_p1,
+                    points_p2=match.points_p2,
+                    status=match.status,
+                    turns=self._format_rounds_for_player(match.id),
+                    external_match_id=match.id,
+                )
+            )
+        except RuntimeError:
+            logger.warning(
+                f"⚠️ Cannot create async task for match {match.id} finalization. "
+                f"Running in sync context - player stats may not be updated!"
+            )
+
+        return self.get_state(match_id, player_id)
