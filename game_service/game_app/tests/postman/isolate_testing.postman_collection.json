@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "5ba5dc12-8f3b-4327-a4ab-8faa5b2f7232",
 		"name": "Tri-Duel Game Service",
-		"description": "Complete test collection for Game Service endpoints.\n\n## Features:\n\n- Match creation and management\n    \n- Move submission and validation\n    \n- Card visualization (SVG)\n    \n- Authentication tests\n    \n\n## Setup:\n\n1. Set base_url to Game Service URL\n    \n2. Set auth_token with JWT from Auth Service\n    \n3. Run collection in Postman\n    \n\nVersion: 1.0.1",
+		"description": "Complete test collection for Game Service endpoints. Need test user 'alice' and correct JWT token written into env tab.\n\n## Features:\n\n- Match creation and management\n    \n- Move submission and validation\n    \n- Card visualization (SVG)\n    \n- Authentication tests\n    \n\n## Setup:\n\n1. Set base_url to Game Service URL\n    \n2. Set auth_token with JWT from Auth Service\n    \n3. Run collection in Postman\n    \n\nVersion: 1.0.1",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "49703585",
 		"_collection_link": "https://cypis-olejowy-7668800.postman.co/workspace/Cypis-1010's-Workspace~294f3157-2e01-4117-8728-bd7f2eeaf015/collection/49703585-5ba5dc12-8f3b-4327-a4ab-8faa5b2f7232?action=share&source=collection_link&creator=49703585"
@@ -382,60 +382,6 @@
 						"description": "Submit move as Bob but using Alice's token - expect 403"
 					},
 					"response": []
-				},
-				{
-					"name": "POST Surrender Match",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Response indicates match is surrendered\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property(\"surrendered\");",
-									"    pm.expect(jsonData.surrendered).to.be.true;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{auth_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/matches/{{match_id}}/surrender",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"matches",
-								"{{match_id}}",
-								"surrender"
-							]
-						},
-						"description": "Surrender the match as the authenticated user."
-					},
-					"response": []
 				}
 			],
 			"description": "Match creation, state retrieval, and move submission"
@@ -716,6 +662,67 @@
 				}
 			],
 			"description": "Error handling and validation tests"
+		},
+		{
+			"name": "5. Match Surrender",
+			"item": [
+				{
+					"name": "POST Surrender Match",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains match state\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property(\"status\");",
+									"    pm.expect(jsonData.status).to.equal(\"finished\");",
+									"    pm.expect(jsonData).to.have.property(\"match_winner\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/matches/{{match_id}}/surrender",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"matches",
+								"{{match_id}}",
+								"surrender"
+							]
+						},
+						"description": "Surrender the match as the authenticated user."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints related to match surrender functionality."
 		}
 	],
 	"event": [

@@ -237,7 +237,6 @@ async def get_deck_gallery(db: Session = Depends(get_db)):
 @router.get("/matches/{match_id}/hand")
 async def get_player_hand_visual(
     match_id: str,
-    player_id: str,
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user)
 ):
@@ -252,25 +251,19 @@ async def get_player_hand_visual(
 
     Args:
         match_id: Match identifier
-        player_id: Player identifier (must match authenticated user)
 
     Returns:
         SVG visualization of player's hand
 
     Usage:
-        - Browser: http://localhost:8003/matches/{match_id}/hand?player_id={player_id}
+        - Browser: http://localhost:8003/matches/{match_id}/hand
         - Shows available and used cards separately
         - Used cards are grayed out and marked
     """
     from fastapi.responses import Response
     from game_app.utils.card_deck_svg import generate_player_hand_svg
 
-    # Validate that player_id matches authenticated user
-    if player_id != user.get("sub"):
-        raise HTTPException(
-            status_code=403,
-            detail="You can only view your own hand"
-        )
+    player_id = user.get("sub")
 
     match_service = MatchService(db)
 
