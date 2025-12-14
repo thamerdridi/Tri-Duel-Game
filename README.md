@@ -168,7 +168,7 @@ curl -X POST http://localhost:8002/matches \
     "player1_score": 3,
     "player2_score": 2,
     "external_match_id": "MATCH_ID_HERE",
-    "seed": "12345"
+    "turns": []
   }'
 ```
 
@@ -217,9 +217,11 @@ GET  /health         - Health check
 ```
 GET  /cards                        - List all cards (public)
 GET  /cards/{id}                   - Get card details (public)
-POST /matches                      - Create match record (internal)
-GET  /players/{id}/matches         - Get player match history (protected)
-GET  /players/{id}/matches/{m_id}  - Get match details (protected)
+POST /players                      - Create/update my profile (protected)
+GET  /players/me                   - Get my profile (protected)
+POST /matches                      - Create match record (internal, Game Service only)
+GET  /players/{external_id}/matches - Get player match history (public)
+GET  /players/{external_id}/matches/{match_id} - Get match details (public)
 GET  /leaderboard                  - Get global rankings (public)
 GET  /health                       - Health check
 ```

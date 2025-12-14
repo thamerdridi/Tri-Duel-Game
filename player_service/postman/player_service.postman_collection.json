@@ -6,7 +6,7 @@
   },
   "variable": [
     { "key": "auth_base_url", "value": "http://localhost:8001" },
-    { "key": "player_base_url", "value": "https://localhost:8000" },
+    { "key": "player_base_url", "value": "https://localhost:8002" },
     { "key": "player1_username", "value": "player1" },
     { "key": "player2_username", "value": "player2" },
     { "key": "game_service_username", "value": "game_service" },
