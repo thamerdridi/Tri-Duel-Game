@@ -267,7 +267,7 @@
             "url": { "raw": "{{player_base_url}}/matches", "host": ["{{player_base_url}}"], "path": ["matches"] },
             "body": {
               "mode": "raw",
-              "raw": "{\"player1_external_id\":\"{{player1_username}}\",\"player2_external_id\":\"{{player2_username}}\",\"winner_external_id\":\"{{player1_username}}\",\"player1_score\":3,\"player2_score\":2,\"external_match_id\":\"pm-match-1\",\"turns\":[{\"turn_number\":1,\"player1_card_id\":1,\"player2_card_id\":2,\"winner_external_id\":\"{{player1_username}}\"}]}"
+              "raw": "{\"player1_external_id\":\"{{player1_username}}\",\"player2_external_id\":\"{{player2_username}}\",\"winner_external_id\":\"{{player1_username}}\",\"player1_score\":3,\"player2_score\":2,\"external_match_id\":\"pm-match-1\",\"turns\":[{\"turn_number\":1,\"player1_card_name\":\"Rock 1\",\"player2_card_name\":\"Paper 2\",\"winner_external_id\":\"{{player1_username}}\"}]}"
             }
           },
           "event": [

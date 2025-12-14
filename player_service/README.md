@@ -26,7 +26,7 @@ docker compose up --build
 
 - `GET /health` (public)
 - `POST /players`, `GET /players/me` (JWT required; token validated via Auth Service)
-- `GET /players/{external_id}/matches`, `GET /players/{external_id}/matches/{match_id}` (public; match details include ordered `turns`)
+- `GET /players/{external_id}/matches`, `GET /players/{external_id}/matches/{match_id}` (public; match details include ordered `turns` with `player1_card_name`/`player2_card_name`)
 - `GET /leaderboard` (public)
 - `POST /matches` (internal; Game Service only)
 

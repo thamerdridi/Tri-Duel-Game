@@ -162,10 +162,10 @@ paths:
                     properties:
                       turn_number:
                         type: integer
-                      player1_card_id:
-                        type: integer
-                      player2_card_id:
-                        type: integer
+                      player1_card_name:
+                        type: string
+                      player2_card_name:
+                        type: string
                       winner_external_id:
                         type: string
                         nullable: true

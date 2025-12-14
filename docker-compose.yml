@@ -29,6 +29,27 @@ services:
     restart: unless-stopped
 
   # ============================================================
+  # POSTGRESQL DATABASE (SIDECAR) - Player Service
+  # ============================================================
+  player_postgres:
+    image: postgres:15-alpine
+    container_name: player_postgres
+    environment:
+      POSTGRES_USER: player_user
+      POSTGRES_PASSWORD: player_password
+      POSTGRES_DB: tri_duel_player
+    volumes:
+      - player_postgres_data:/var/lib/postgresql/data
+    networks:
+      - triduel_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U player_user -d tri_duel_player"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================================
   # AUTH SERVICE - Port 8001
   # ============================================================
   auth_service:
@@ -71,13 +92,15 @@ services:
       # Service URLs
       AUTH_SERVICE_URL: "http://auth_service:8001"
 
-      # Database - SQLite (local file for simplicity)
-      DATABASE_URL: "sqlite:///./players.db"
+      # Database - PostgreSQL sidecar (more robust than bind-mounted SQLite)
+      DATABASE_URL: "postgresql+psycopg2://player_user:player_password@player_postgres:5432/tri_duel_player"
     volumes:
       - ./player_service:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
     depends_on:
       auth_service:
+        condition: service_healthy
+      player_postgres:
         condition: service_healthy
     networks:
       - triduel_network
@@ -142,4 +165,6 @@ networks:
 
 volumes:
   game_postgres_data:
+    driver: local
+  player_postgres_data:
     driver: local

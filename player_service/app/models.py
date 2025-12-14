@@ -53,8 +53,8 @@ class MatchTurn(Base):
 
     turn_number = Column(SmallInteger, nullable=False)
 
-    player1_card_id = Column(Integer, nullable=False)
-    player2_card_id = Column(Integer, nullable=False)
+    player1_card_name = Column(String(64), nullable=False)
+    player2_card_name = Column(String(64), nullable=False)
 
     winner_id = Column(Integer, ForeignKey("player_profiles.id"), nullable=True)
 
