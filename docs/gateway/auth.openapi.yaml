@@ -1,0 +1,137 @@
+openapi: 3.0.3
+info:
+  title: Tri-Duel Auth Service API
+  description: Authentication and authorization endpoints for Tri-Duel
+  version: "1.0.0"
+
+servers:
+  - url: https://api.triduel.local
+    description: API Gateway (HTTPS)
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+      responses:
+        "200":
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserOut"
+        "400":
+          description: Username already exists
+
+  /auth/login:
+    post:
+      summary: Authenticate user and return JWT
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLogin"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Token"
+        "400":
+          description: Invalid credentials
+
+  /auth/validate:
+    get:
+      summary: Validate JWT token
+      tags:
+        - Auth
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Token is valid
+        "401":
+          description: Token is invalid or expired
+
+  /health:
+    get:
+      summary: Health check
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Service is healthy
+
+components:
+  schemas:
+    UserCreate:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          example: player1
+        email:
+          type: string
+          format: email
+          example: player1@test.com
+        password:
+          type: string
+          format: password
+          example: strongpassword123
+
+    UserLogin:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: player1
+        password:
+          type: string
+          format: password
+          example: strongpassword123
+
+    UserOut:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: player1
+        email:
+          type: string
+          format: email
+          example: player1@test.com
+
+    Token:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+        token_type:
+          type: string
+          example: bearer

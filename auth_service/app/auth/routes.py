@@ -1,12 +1,20 @@
+import re
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.auth.hashing import hash_password, verify_password
-from app.auth.jwt_handler import create_access_token
+from app.auth.jwt_handler import create_access_token, verify_token
 from app.models import User
 from app.schemas import UserCreate, UserLogin, UserOut
+from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9_]{3,20}$")
+PASSWORD_REGEX = re.compile(
+    r"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$"
+)
+
 
 def get_db():
     db = SessionLocal()
@@ -15,17 +23,41 @@ def get_db():
     finally:
         db.close()
 
-# REGISTER NEW USER
-@router.post("/register", response_model=UserOut)
+
+# ==========================
+# REGISTER
+# ==========================
+@router.post(
+    "/register",
+    response_model=UserOut,
+    status_code=status.HTTP_201_CREATED
+)
 def register(user: UserCreate, db: Session = Depends(get_db)):
 
-    user_exists = db.query(User).filter(User.username == user.username).first()
-    if user_exists:
-        raise HTTPException(status_code=400, detail="Username already taken.")
+    if not USERNAME_REGEX.match(user.username):
+        raise HTTPException(
+            status_code=400,
+            detail="Username must be 3-20 characters (letters, numbers, underscore)"
+        )
+
+    if not PASSWORD_REGEX.match(user.password):
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be 8+ chars, upper, lower, number"
+        )
+
+    if db.query(User).filter(User.username == user.username).first():
+        raise HTTPException(status_code=409, detail="Username already exists")
+
+    if db.query(User).filter(User.email == user.email).first():
+        raise HTTPException(status_code=409, detail="Email already exists")
+
+    fernet = settings.get_fernet()
+    encrypted_email = fernet.encrypt(user.email.encode()).decode()
 
     new_user = User(
         username=user.username,
-        email=user.email,
+        email=encrypted_email,
         hashed_password=hash_password(user.password),
     )
 
@@ -33,28 +65,51 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    return new_user
+    return UserOut(
+        id=new_user.id,
+        username=new_user.username,
+        email=user.email  # decrypted response
+    )
 
 
-# LOGIN USER
+# ==========================
+# LOGIN
+# ==========================
 @router.post("/login")
 def login(credentials: UserLogin, db: Session = Depends(get_db)):
 
-    user = db.query(User).filter(User.username == credentials.username).first()
+    user = db.query(User).filter(
+        User.username == credentials.username
+    ).first()
 
-    if not user or not verify_password(credentials.password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Invalid username or password.")
+    if not user or not verify_password(
+        credentials.password, user.hashed_password
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials"
+        )
 
-    token = create_access_token({"sub": user.username, "user_id": user.id})
+    token = create_access_token(
+        subject=user.username,
+        user_id=user.id
+    )
 
-    return {"access_token": token, "token_type": "bearer"}
+    return {
+        "access_token": token,
+        "token_type": "bearer"
+    }
 
 
-# VALIDATE TOKEN
+# ==========================
+# TOKEN VALIDATION
+# ==========================
 @router.get("/validate")
-def validate(token: str):
-    from app.auth.jwt_handler import verify_token
-    decoded = verify_token(token)
-    if not decoded:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return decoded
+def validate_token(token: str):
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+    return payload
