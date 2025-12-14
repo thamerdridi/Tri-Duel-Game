@@ -149,7 +149,7 @@ class MatchStateResponse(BaseModel):
         orm_mode = True
 
 
-# ============================================================
+# ===========================================================
 # CARD DISPLAY (GET /cards endpoints)
 # ============================================================
 class CardDisplaySchema(BaseModel):
@@ -186,3 +186,4 @@ class CardDetailResponse(BaseModel):
     description: str
     beats: str  # What this card beats
     loses_to: str  # What beats this card
+

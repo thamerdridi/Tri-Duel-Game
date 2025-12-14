@@ -72,6 +72,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from uuid import uuid4
 
 from game_app.main import app
 from game_app.database.database import Base
@@ -81,8 +82,9 @@ from game_app.database.init.initialize_cards import init_cards
 
 @pytest.fixture
 def client():
-    # SHARED in-memory SQLite database for SQLAlchemy 2.x
-    DATABASE_URL = "sqlite+pysqlite:///file:memdb1?mode=memory&cache=shared"
+    # Unique in-memory SQLite database per fixture to avoid test cross-talk
+    unique_name = uuid4().hex
+    DATABASE_URL = f"sqlite+pysqlite:///file:memdb_{unique_name}?mode=memory&cache=shared"
 
     engine = create_engine(
         DATABASE_URL,
@@ -161,8 +163,9 @@ def client_no_auth():
     Client fixture WITHOUT authentication mocking.
     Used for authentication tests that need to test real auth behavior.
     """
-    # SHARED in-memory SQLite database for SQLAlchemy 2.x
-    DATABASE_URL = "sqlite+pysqlite:///file:memdb1?mode=memory&cache=shared"
+    # Unique in-memory SQLite database per fixture to avoid test cross-talk
+    unique_name = uuid4().hex
+    DATABASE_URL = f"sqlite+pysqlite:///file:memdb_{unique_name}?mode=memory&cache=shared"
 
     engine = create_engine(
         DATABASE_URL,

@@ -7,7 +7,7 @@ match finalization and player statistics updates.
 import httpx
 import logging
 import asyncio
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from game_app.configs.client_config import (
     PLAYER_SERVICE_URL,
@@ -17,7 +17,7 @@ from game_app.configs.client_config import (
     RETRY_BACKOFF_BASE,
     MAX_RETRY_WAIT,
 )
-from game_app.clients.schemas import PlayerServiceMatchFinalize
+from game_app.clients.schemas import PlayerServiceMatchFinalize, MatchTurnPayload
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,9 @@ class PlayerClient:
         winner_id: Optional[str],
         points_p1: int,
         points_p2: int,
-        status: str = "finished"
+        status: str = "finished",
+        turns: Optional[List[Dict[str, Any]]] = None,
+        external_match_id: Optional[str] = None,
     ) -> bool:
         """
         Notify player service about finished match.
@@ -59,6 +61,8 @@ class PlayerClient:
             points_p1: Points scored by player1
             points_p2: Points scored by player2
             status: Match status (default: "finished")
+            turns: List of turns in the match (optional)
+            external_match_id: External match identifier (optional)
 
         Returns:
             bool: True if notification succeeded, False otherwise
@@ -72,8 +76,8 @@ class PlayerClient:
             winner_external_id=winner_id,
             player1_score=points_p1,
             player2_score=points_p2,
-            rounds=[],  # Temporary - will be removed by Player Service team
-            seed=match_id,
+            turns=[MatchTurnPayload(**t) for t in (turns or [])],
+            external_match_id=external_match_id or str(match_id),
         )
 
         logger.info(f"🎯 Finalizing match {match_id}: winner={winner_id}")

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import logging
+from typing import List
 
 from game_app.database.database import get_db
 from game_app.services.match_service import MatchService
@@ -136,6 +137,32 @@ async def get_match_state(
     return MatchStateResponse(**state)
 
 
+@router.get("/matches/active", response_model=List[MatchStateResponse])
+def get_active_matches(
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    """Retrieve all active matches for the authenticated user."""
+    service = MatchService(db)
+    active_matches = service.get_active_matches(user.get("sub"))
+    return active_matches
+
+
+@router.post("/matches/{match_id}/surrender", response_model=MatchStateResponse)
+def surrender_match(
+    match_id: str,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    """Surrender the match, marking it as a loss for the surrendering player."""
+    service = MatchService(db)
+    try:
+        match_state = service.surrender_match(match_id, user.get("sub"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return match_state
+
+
 # ============================================================
 # CARD VISUALIZATION ENDPOINTS (PUBLIC - SVG Only)
 # ============================================================
@@ -264,4 +291,3 @@ async def get_player_hand_visual(
             "Cache-Control": "no-cache"  # Hand changes during match
         }
     )
-
