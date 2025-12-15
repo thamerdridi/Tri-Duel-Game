@@ -69,6 +69,8 @@ services:
       DATABASE_URL: "sqlite:///./auth.db"
     volumes:
       - ./auth_service:/app
+      - ./certs/auth:/certs:ro
+      - ./certs/ca/ca.crt:/certs/ca.crt:ro
     command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
     networks:
       - triduel_network
@@ -99,6 +101,8 @@ services:
       PLAYER_INTERNAL_API_KEY: ${SERVICE_API_KEY}
     volumes:
       - ./player_service:/app
+      - ./certs/auth:/certs:ro
+      - ./certs/ca/ca.crt:/certs/ca.crt:ro
     command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
     depends_on:
       auth_service:
@@ -141,6 +145,8 @@ services:
 
     volumes:
       - ./game_service:/app
+      - ./certs/game:/certs:ro
+      - ./certs/ca/ca.crt:/certs/ca.crt:ro
     command: uvicorn game_app.main:app --host 0.0.0.0 --port 8003 --reload
     depends_on:
       auth_service:

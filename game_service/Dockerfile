@@ -28,4 +28,11 @@ USER gameuser
 EXPOSE 8003
 
 # Run the application
-CMD ["uvicorn", "game_app.main:app", "--host", "0.0.0.0", "--port", "8003"]
+CMD [
+  "uvicorn",
+  "game_app.main:app",
+  "--host", "0.0.0.0",
+  "--port", "8443",
+  "--ssl-certfile", "/certs/game.crt",
+  "--ssl-keyfile", "/certs/game.key"
+]

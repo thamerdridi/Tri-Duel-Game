@@ -51,7 +51,7 @@ class AuthClient:
 
         for attempt in range(1, MAX_RETRY_ATTEMPTS + 1):
             try:
-                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                async with httpx.AsyncClient(timeout=self.timeout, verify="/certs/ca/crt",) as client:
                     response = await client.get(
                         endpoint,
                         params={"token": token}

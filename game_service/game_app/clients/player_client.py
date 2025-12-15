@@ -84,7 +84,7 @@ class PlayerClient:
 
         for attempt in range(1, MAX_RETRY_ATTEMPTS + 1):
             try:
-                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                async with httpx.AsyncClient(timeout=self.timeout, verify="/certs/ca/crt",) as client:
                     response = await client.post(
                         endpoint,
                         json=payload_schema.model_dump(),  # Pydantic v2 (or .dict() for v1)
@@ -146,7 +146,7 @@ class PlayerClient:
         logger.debug(f"👤 Fetching player info for {player_id}")
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, verify="/certs/ca/crt",) as client:
                 response = await client.get(endpoint)
 
                 if response.status_code == 200:
