@@ -39,7 +39,7 @@ Docs: `http://localhost:8002/docs` (or `https://localhost:8002/docs` when TLS is
 - Service integration: use `POST /internal/players` (API key) to ensure profiles exist before posting matches.
 - Match history is append-only: no update/delete endpoints for matches.
 - Idempotency: `external_match_id` prevents duplicate match inserts.
-- Internal auth: `POST /matches` requires `X-Internal-Api-Key` (set `PLAYER_INTERNAL_API_KEY`).
+- Internal auth: `POST /matches` requires `X-Internal-Api-Key` (set `SERVICE_API_KEY`).
 
 ## Testing
 

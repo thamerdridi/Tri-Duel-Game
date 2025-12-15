@@ -7,7 +7,7 @@ from fastapi import Header, HTTPException, status
 
 
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
-PLAYER_INTERNAL_API_KEY = os.getenv("PLAYER_INTERNAL_API_KEY")
+SERVICE_API_KEY = os.getenv("SERVICE_API_KEY")
 
 
 async def verify_token(authorization: Optional[str] = Header(None)) -> dict:
@@ -58,13 +58,13 @@ async def require_internal_api_key(
             detail="Internal API key missing",
         )
 
-    if not PLAYER_INTERNAL_API_KEY:
+    if not SERVICE_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal API key not configured",
+            detail="SERVICE_API_KEY not configured",
         )
 
-    if not secrets.compare_digest(provided_key, PLAYER_INTERNAL_API_KEY):
+    if not secrets.compare_digest(provided_key, SERVICE_API_KEY):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden",

@@ -159,7 +159,7 @@ After a match completes, record it in the Player Service for leaderboard trackin
 ```bash
 # Manually submit match result to Player Service
 curl -X POST http://localhost:8002/matches \
-  -H "X-Internal-Api-Key: PLAYER_INTERNAL_API_KEY" \
+  -H "X-Internal-Api-Key: SERVICE_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "player1_external_id": "player1",
