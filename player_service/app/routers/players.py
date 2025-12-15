@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
-from ..auth import get_current_user
+from ..auth import get_current_user, require_internal_api_key
 from ..db import get_db
 from ..models import PlayerProfile, Match, MatchTurn
 from ..schemas import (
@@ -13,6 +13,7 @@ from ..schemas import (
     MatchTurnOut,
     PlayerProfileOut,
     PlayerProfileUpdate,
+    PlayerProfileSync,
     LeaderboardEntry,
 )
 
@@ -20,6 +21,39 @@ from ..schemas import (
 router = APIRouter(
     tags=["players"],
 )
+
+
+@router.post("/internal/players", response_model=PlayerProfileOut)
+async def sync_player_profile_internal(
+    payload: PlayerProfileSync,
+    response: Response,
+    _: None = Depends(require_internal_api_key),
+    db: Session = Depends(get_db),
+):
+    profile = (
+        db.query(PlayerProfile)
+        .filter(PlayerProfile.external_id == payload.external_id)
+        .first()
+    )
+
+    if profile is None:
+        profile = PlayerProfile(
+            external_id=payload.external_id,
+            username=payload.username or payload.external_id,
+        )
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+        response.status_code = 201
+        return profile
+
+    if payload.username is not None and payload.username != profile.username:
+        profile.username = payload.username
+        db.commit()
+        db.refresh(profile)
+
+    response.status_code = 200
+    return profile
 
 
 @router.post("/players", response_model=PlayerProfileOut)

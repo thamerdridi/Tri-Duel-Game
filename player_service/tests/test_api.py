@@ -145,3 +145,21 @@ def test_leaderboard_ok(client):
     resp = client.get("/leaderboard")
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
+
+
+def test_internal_sync_requires_api_key(client):
+    resp = client.post("/internal/players", json={"external_id": "alice"})
+    assert resp.status_code == 401
+
+
+def test_internal_sync_ok(client):
+    from app import auth as auth_module
+    auth_module.PLAYER_INTERNAL_API_KEY = "test_key"
+
+    resp = client.post(
+        "/internal/players",
+        headers={"X-Internal-Api-Key": "test_key"},
+        json={"external_id": "alice", "username": "Alice"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["external_id"] == "alice"

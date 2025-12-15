@@ -13,9 +13,24 @@ app = FastAPI(
 @app.on_event("startup")
 def on_startup() -> None:
     import os
+    import time
+    from sqlalchemy.exc import OperationalError
+
     if os.getenv("TESTING"):
         return
-    Base.metadata.create_all(bind=engine)
+
+    # Docker/Postgres can be "healthy" but still not immediately reachable from other containers.
+    # Retry a few times instead of crashing the container.
+    last_error: Exception | None = None
+    for _ in range(30):
+        try:
+            Base.metadata.create_all(bind=engine)
+            return
+        except OperationalError as e:
+            last_error = e
+            time.sleep(1)
+
+    raise last_error or RuntimeError("Database not reachable")
 
 
 @app.get("/health")

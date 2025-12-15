@@ -165,6 +165,33 @@
       "name": "Player Service",
       "item": [
         {
+          "name": "Internal sync profile (valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Api-Key", "value": "{{player_internal_api_key}}" }
+            ],
+            "url": { "raw": "{{player_base_url}}/internal/players", "host": ["{{player_base_url}}"], "path": ["internal", "players"] },
+            "body": { "mode": "raw", "raw": "{\"external_id\":\"{{player1_username}}\",\"username\":\"{{player1_username}}\"}" }
+          },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Internal sync returns 200 or 201', function () { pm.expect([200,201]).to.include(pm.response.code); });"] } }
+          ]
+        },
+        {
+          "name": "Internal sync profile (invalid - missing API key)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{player_base_url}}/internal/players", "host": ["{{player_base_url}}"], "path": ["internal", "players"] },
+            "body": { "mode": "raw", "raw": "{\"external_id\":\"{{player2_username}}\",\"username\":\"{{player2_username}}\"}" }
+          },
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('Missing API key returns 401', function () { pm.response.to.have.status(401); });"] } }
+          ]
+        },
+        {
           "name": "Health (valid)",
           "request": { "method": "GET", "url": { "raw": "{{player_base_url}}/health", "host": ["{{player_base_url}}"], "path": ["health"] } },
           "event": [

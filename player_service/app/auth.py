@@ -48,9 +48,10 @@ async def verify_token(authorization: Optional[str] = Header(None)) -> dict:
 
 async def require_internal_api_key(
     x_internal_api_key: Optional[str] = Header(None, alias="X-Internal-Api-Key"),
-    x_api_key: Optional[str] = Header(None, alias="api-key"),
+    x_api_key: Optional[str] = Header(None, alias="X-Api-Key"),
+    api_key: Optional[str] = Header(None, alias="api-key"),
 ) -> None:
-    provided_key = x_internal_api_key or x_api_key
+    provided_key = x_internal_api_key or x_api_key or api_key
     if not provided_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -16,6 +16,11 @@ class PlayerProfileUpdate(BaseModel):
     username: Optional[str] = None
 
 
+class PlayerProfileSync(BaseModel):
+    external_id: str
+    username: Optional[str] = None
+
+
 class MatchSummaryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
