@@ -44,6 +44,7 @@ class MatchTurnOut(BaseModel):
 
 
 class MatchDetailOut(MatchSummaryOut):
+    moves_log: Optional[str] = None
     turns: list[MatchTurnOut]
 
 
@@ -54,6 +55,7 @@ class MatchCreate(BaseModel):
     player1_score: int
     player2_score: int
     external_match_id: str
+    moves_log: Optional[str] = None
     turns: list[MatchTurnCreate] = Field(default_factory=list)
 
 

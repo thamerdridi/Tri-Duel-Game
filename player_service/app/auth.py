@@ -2,11 +2,12 @@ import os
 from typing import Optional
 
 import httpx
+import secrets
 from fastapi import Header, HTTPException, status
 
 
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
-GAME_SERVICE_SUBJECT = os.getenv("GAME_SERVICE_SUBJECT", "game_service")
+PLAYER_INTERNAL_API_KEY = os.getenv("PLAYER_INTERNAL_API_KEY")
 
 
 async def verify_token(authorization: Optional[str] = Header(None)) -> dict:
@@ -45,14 +46,28 @@ async def verify_token(authorization: Optional[str] = Header(None)) -> dict:
         )
 
 
-async def require_game_service_jwt(authorization: Optional[str] = Header(None)) -> dict:
-    payload = await verify_token(authorization)
-    if payload.get("sub") != GAME_SERVICE_SUBJECT:
+async def require_internal_api_key(
+    x_internal_api_key: Optional[str] = Header(None, alias="X-Internal-Api-Key"),
+    x_api_key: Optional[str] = Header(None, alias="X-Api-Key"),
+) -> None:
+    provided_key = x_internal_api_key or x_api_key
+    if not provided_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Internal API key missing",
+        )
+
+    if not PLAYER_INTERNAL_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal API key not configured",
+        )
+
+    if not secrets.compare_digest(provided_key, PLAYER_INTERNAL_API_KEY):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden",
         )
-    return payload
 
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:

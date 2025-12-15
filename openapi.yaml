@@ -127,7 +127,7 @@ paths:
       summary: Create match record (for statistics)
       tags: [Player]
       security:
-        - bearerAuth: []
+        - internalApiKey: []
       requestBody:
         required: true
         content:
@@ -155,6 +155,10 @@ paths:
                 external_match_id:
                   type: string
                   description: Idempotency key.
+                moves_log:
+                  type: string
+                  nullable: true
+                  description: Optional pre-formatted match moves log.
                 turns:
                   type: array
                   items:
@@ -490,3 +494,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    internalApiKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Api-Key
