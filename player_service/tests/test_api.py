@@ -92,7 +92,6 @@ def test_post_match_idempotent_and_history(client):
         "player1_score": 3,
         "player2_score": 1,
         "external_match_id": "match-123",
-        "moves_log": "turn 1: alice played Rock 1; bob played Paper 2; bob wins",
         "turns": [
             {
                 "turn_number": 1,
@@ -130,7 +129,6 @@ def test_post_match_idempotent_and_history(client):
     assert body["external_match_id"] == "match-123"
     assert len(body["turns"]) == 1
     assert body["turns"][0]["player1_card_name"] == "Rock 1"
-    assert body["moves_log"] is not None
 
 
 def test_get_match_detail_invalid_match(client):

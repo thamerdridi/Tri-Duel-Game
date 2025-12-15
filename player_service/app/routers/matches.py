@@ -55,7 +55,6 @@ def create_match(
         winner_id=winner_id,
         player1_score=payload.player1_score,
         player2_score=payload.player2_score,
-        moves_log=payload.moves_log,
     )
     db.add(match)
 

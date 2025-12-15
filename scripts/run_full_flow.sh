@@ -77,10 +77,12 @@ log() {
 }
 
 pretty_json() {
-  if jq -e . >/dev/null 2>&1; then
-    jq .
+  local input
+  input="$(cat)"
+  if echo "$input" | jq -e . >/dev/null 2>&1; then
+    echo "$input" | jq .
   else
-    cat
+    printf '%s\n' "$input"
   fi
 }
 
@@ -229,32 +231,23 @@ if [ "$VERBOSE" != "0" ]; then
   echo "$STATE" | pretty_json
 fi
 
+log "building turns[]..."
 TURNS_JSON="$(echo "$STATE" | jq -c --arg p1 "$ALICE_USER" --arg p2 "$BOB_USER" '
   def cap(s): (s[0:1] | ascii_upcase) + (s[1:]);
   def cname(c): cap(c.category) + " " + (c.power|tostring);
-  ([ .used_cards[] | {r: .round_used, name: cname(.card)} ] as $p1c
-   | [ .opponent_used_cards[] | {r: .round_used, name: cname(.card)} ] as $p2c
+  ([ (.used_cards // [])[] | {r: .round_used, name: cname(.card)} ] as $p1c
+   | [ (.opponent_used_cards // [])[] | {r: .round_used, name: cname(.card)} ] as $p2c
    | [ range(1; ((($p1c|map(.r)|max)//0) + 1)) as $r
        | {
            turn_number: $r,
-           player1_card_name: (($p1c[] | select(.r==$r) | .name) // ""),
-           player2_card_name: (($p2c[] | select(.r==$r) | .name) // "")
+           player1_card_name: (first($p1c[] | select(.r==$r) | .name) // ""),
+           player2_card_name: (first($p2c[] | select(.r==$r) | .name) // "")
          }
      ])
 ')"
 
-read -r -d '' JQ_MOVES_LOG <<'JQ'
-def cap(s): (s[0:1] | ascii_upcase) + (s[1:]);
-def cname(c): cap(c.category) + " " + (c.power|tostring);
-([ .used_cards[] | {r: .round_used, name: cname(.card)} ] as $p1c
- | [ .opponent_used_cards[] | {r: .round_used, name: cname(.card)} ] as $p2c
- | [ range(1; ((($p1c|map(.r)|max)//0) + 1)) as $r
-     | "turn \($r): \($p1) played \(( $p1c[] | select(.r==$r) | .name)) ; \($p2) played \(( $p2c[] | select(.r==$r) | .name))"
-   ] | join("\n")
-)
-JQ
-
-MOVES_LOG="$(echo "$STATE" | jq -r --arg p1 "$ALICE_USER" --arg p2 "$BOB_USER" "$JQ_MOVES_LOG")"
+TURNS_COUNT="$(echo "$TURNS_JSON" | jq -r 'length')"
+log "turns_count=${TURNS_COUNT}"
 
 echo "Ensuring profiles exist via internal sync (API-key protected)..."
 http POST "${PLAYER_BASE}/internal/players" \
@@ -275,7 +268,6 @@ MATCH_PAYLOAD="$(jq -n \
   --arg ext "$MATCH_ID" \
   --argjson p1s "$P1_SCORE" \
   --argjson p2s "$P2_SCORE" \
-  --arg moves_log "$MOVES_LOG" \
   --argjson turns "$TURNS_JSON" \
   '{
     player1_external_id: $p1,
@@ -284,7 +276,6 @@ MATCH_PAYLOAD="$(jq -n \
     player1_score: $p1s,
     player2_score: $p2s,
     external_match_id: $ext,
-    moves_log: $moves_log,
     turns: $turns
   }'
 )"
@@ -295,7 +286,20 @@ echo "$MATCH_PAYLOAD" | pretty_json
 http POST "${PLAYER_BASE}/matches" \
   -H "X-Internal-Api-Key: ${PLAYER_INTERNAL_API_KEY}" \
   -H 'Content-Type: application/json' \
-  -d "$MATCH_PAYLOAD" | pretty_json
+  -d "$MATCH_PAYLOAD" | tee /tmp/player_match_post.json | pretty_json
+
+POSTED_MATCH_ID="$(cat /tmp/player_match_post.json | jq -r '.id // empty' 2>/dev/null || true)"
+if [ -n "$POSTED_MATCH_ID" ]; then
+  echo "Match detail (includes turns/rounds):"
+  MATCH_DETAIL="$(http GET "${PLAYER_BASE}/players/${ALICE_USER}/matches/${POSTED_MATCH_ID}")"
+  echo "$MATCH_DETAIL" | pretty_json
+  echo "Rounds (turns[]):"
+  echo "$MATCH_DETAIL" | jq -r '
+    .turns
+    | if (type != "array") then "no turns" else . end
+    | .[]
+    | "turn \(.turn_number): p1=\(.player1_card_name) p2=\(.player2_card_name) winner=\(.winner_external_id // "-")"'
+fi
 
 echo "Player history:"
 http GET "${PLAYER_BASE}/players/${ALICE_USER}/matches" | pretty_json
