@@ -88,7 +88,7 @@ class PlayerClient:
                     response = await client.post(
                         endpoint,
                         json=payload_schema.model_dump(),  # Pydantic v2 (or .dict() for v1)
-                        headers={"X-API-Key": SERVICE_API_KEY},
+                        headers={"api-key": SERVICE_API_KEY},
                     )
 
                     # Player Service returns 201 for POST /matches

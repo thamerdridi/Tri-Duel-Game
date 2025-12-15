@@ -64,3 +64,4 @@ PLAYER_ENDPOINTS = {
 
 # Player Service API Key for service-to-service authentication
 SERVICE_API_KEY = os.getenv("SERVICE_API_KEY", "default_key")
+

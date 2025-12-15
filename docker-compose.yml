@@ -96,7 +96,7 @@ services:
       DATABASE_URL: "postgresql+psycopg2://player_user:player_password@player_postgres:5432/tri_duel_player"
 
       # Internal auth for POST /matches
-      PLAYER_INTERNAL_API_KEY: ${PLAYER_INTERNAL_API_KEY:-change_me}
+      PLAYER_INTERNAL_API_KEY: ${SERVICE_API_KEY}
     volumes:
       - ./player_service:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
@@ -132,8 +132,9 @@ services:
       AUTH_SERVICE_URL: "http://auth_service:8001"
       PLAYER_SERVICE_URL: "http://player_service:8002"
 
-      # Used when Game Service posts match results to Player Service
-      PLAYER_INTERNAL_API_KEY: ${PLAYER_INTERNAL_API_KEY:-change_me}
+      # Ensure both names are available in env - game_service code reads SERVICE_API_KEY
+      SERVICE_API_KEY: ${SERVICE_API_KEY}
+      PLAYER_INTERNAL_API_KEY: ${SERVICE_API_KEY}
 
       # Database - Dedicated PostgreSQL sidecar (from .env)
       DATABASE_URL: "postgresql+psycopg2://${GAME_DB_USER}:${GAME_DB_PASSWORD}@game_postgres:5432/${GAME_DB_NAME}"
