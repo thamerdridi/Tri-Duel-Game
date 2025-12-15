@@ -61,3 +61,6 @@ PLAYER_ENDPOINTS = {
     "get_player": "/players/{player_id}",
     "update_stats": "/players/{player_id}/stats",
 }
+
+# Player Service API Key for service-to-service authentication
+SERVICE_API_KEY = os.getenv("SERVICE_API_KEY", "default_key")

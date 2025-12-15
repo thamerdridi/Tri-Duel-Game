@@ -15,7 +15,7 @@ from game_app.configs.client_config import (
     PLAYER_ENDPOINTS,
     MAX_RETRY_ATTEMPTS,
     RETRY_BACKOFF_BASE,
-    MAX_RETRY_WAIT,
+    MAX_RETRY_WAIT, SERVICE_API_KEY,
 )
 from game_app.clients.schemas import PlayerServiceMatchFinalize, MatchTurnPayload
 
@@ -87,7 +87,8 @@ class PlayerClient:
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
                     response = await client.post(
                         endpoint,
-                        json=payload_schema.model_dump()  # Pydantic v2 (or .dict() for v1)
+                        json=payload_schema.model_dump(),  # Pydantic v2 (or .dict() for v1)
+                        headers={"X-API-Key": SERVICE_API_KEY},
                     )
 
                     # Player Service returns 201 for POST /matches
