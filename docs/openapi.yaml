@@ -1,0 +1,212 @@
+openapi: 3.0.3
+info:
+  title: Card Game API
+  version: 1.0.0
+  description: API specification for Auth, Player, and Game services.
+
+servers:
+  - url: http://localhost:8001
+    description: Auth Service
+  - url: http://localhost:8002
+    description: Player Service
+  - url: http://localhost:8003
+    description: Game Service
+
+paths:
+
+  ###############################################
+  # AUTH SERVICE (PORT 8001)
+  ###############################################
+
+  /auth/register:
+    post:
+      summary: Register new user
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "201":
+          description: User registered
+
+  /auth/login:
+    post:
+      summary: Login and obtain JWT
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: JWT token returned
+
+  /auth/validate:
+    get:
+      summary: Validate JWT token
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Token is valid
+
+  /auth/health:
+    get:
+      summary: Health check
+      tags: [Auth]
+      responses:
+        "200":
+          description: Alive
+
+  ###############################################
+  # PLAYER SERVICE (PORT 8002)
+  ###############################################
+
+  /health:
+    get:
+      summary: Health check
+      tags: [Player]
+      responses:
+        "200":
+          description: Service OK
+
+  /players:
+    post:
+      summary: Create or update my profile
+      tags: [Player]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Profile updated
+        "201":
+          description: Profile created
+
+  /players/me:
+    get:
+      summary: Get my profile
+      tags: [Player]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profile
+        "404":
+          description: Player not found
+
+  /matches:
+    post:
+      summary: Create match record (for statistics)
+      tags: [Player]
+      security:
+        - internalApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - player1_external_id
+                - player2_external_id
+                - player1_score
+                - player2_score
+                - external_match_id
+              properties:
+                player1_external_id:
+                  type: string
+                player2_external_id:
+                  type: string
+                winner_external_id:
+                  type: string
+                  nullable: true
+                player1_score:
+                  type: integer
+                player2_score:
+                  type: integer
+                external_match_id:
+                  type: string
+                  description: Idempotency key.
+                moves_log:
+                  type: string
+                  nullable: true
+                  description: Optional pre-formatted match moves log.
+                turns:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      turn_number:
+                        type: integer
+                      player1_card_name:
+                        type: string
+                      player2_card_name:
+                        type: string
+                      winner_external_id:
+                        type: string
+                        nullable: true
+      responses:
+        "201":
+          description: Match record created
+
+  /players/{player_id}/matches:
+    get:
+      summary: Player match history (public)
+      tags: [Player]
+      parameters:
+        - name: player_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of matches
+
+  /players/{player_id}/matches/{match_id}:
+    get:
+      summary: Get match details (public)
+      tags: [Player]
+      parameters:
+        - name: player_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: match_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Match details
+

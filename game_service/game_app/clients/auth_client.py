@@ -6,6 +6,7 @@ token verification and user validation.
 """
 import httpx
 import logging
+import os
 from typing import Optional
 from fastapi import HTTPException, status, Header
 
@@ -15,6 +16,7 @@ from game_app.configs.client_config import (
     AUTH_ENDPOINTS,
     MAX_RETRY_ATTEMPTS,
     RETRY_BACKOFF_BASE,
+    CA_BUNDLE_PATH,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,6 +33,13 @@ class AuthClient:
     def __init__(self):
         self.base_url = AUTH_SERVICE_URL
         self.timeout = AUTH_TIMEOUT
+        # Determine verify parameter for httpx (either path to CA bundle or True)
+        if os.path.exists(CA_BUNDLE_PATH):
+            self.verify = CA_BUNDLE_PATH
+            logger.debug(f"Using CA bundle at {CA_BUNDLE_PATH} for TLS verification")
+        else:
+            self.verify = True
+            logger.debug("No CA bundle found, using system default CA store for TLS verification")
 
     async def verify_token(self, token: str) -> dict:
         """
@@ -51,7 +60,7 @@ class AuthClient:
 
         for attempt in range(1, MAX_RETRY_ATTEMPTS + 1):
             try:
-                async with httpx.AsyncClient(timeout=self.timeout, verify="/certs/ca/crt",) as client:
+                async with httpx.AsyncClient(timeout=self.timeout, verify=self.verify) as client:
                     response = await client.get(
                         endpoint,
                         params={"token": token}

@@ -7,6 +7,7 @@ match finalization and player statistics updates.
 import httpx
 import logging
 import asyncio
+import os
 from typing import Optional, Dict, Any, List
 
 from game_app.configs.client_config import (
@@ -15,7 +16,7 @@ from game_app.configs.client_config import (
     PLAYER_ENDPOINTS,
     MAX_RETRY_ATTEMPTS,
     RETRY_BACKOFF_BASE,
-    MAX_RETRY_WAIT, SERVICE_API_KEY,
+    MAX_RETRY_WAIT, SERVICE_API_KEY, CA_BUNDLE_PATH,
 )
 from game_app.clients.schemas import PlayerServiceMatchFinalize, MatchTurnPayload
 
@@ -33,6 +34,12 @@ class PlayerClient:
     def __init__(self):
         self.base_url = PLAYER_SERVICE_URL
         self.timeout = PLAYER_TIMEOUT
+        if os.path.exists(CA_BUNDLE_PATH):
+            self.verify = CA_BUNDLE_PATH
+            logger.debug(f"Using CA bundle at {CA_BUNDLE_PATH} for TLS verification")
+        else:
+            self.verify = True
+            logger.debug("No CA bundle found, using system default CA store for TLS verification")
 
     async def finalize_match(
         self,
@@ -84,7 +91,7 @@ class PlayerClient:
 
         for attempt in range(1, MAX_RETRY_ATTEMPTS + 1):
             try:
-                async with httpx.AsyncClient(timeout=self.timeout, verify="/certs/ca/crt",) as client:
+                async with httpx.AsyncClient(timeout=self.timeout, verify=self.verify) as client:
                     response = await client.post(
                         endpoint,
                         json=payload_schema.model_dump(),  # Pydantic v2 (or .dict() for v1)
@@ -146,7 +153,7 @@ class PlayerClient:
         logger.debug(f"👤 Fetching player info for {player_id}")
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, verify="/certs/ca/crt",) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, verify=self.verify) as client:
                 response = await client.get(endpoint)
 
                 if response.status_code == 200:

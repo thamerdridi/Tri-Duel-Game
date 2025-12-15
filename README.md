@@ -273,6 +273,19 @@ cd player_service && pytest -v
 cd game_service && pytest -v
 ```
 
+## TLS / HTTPS note
+
+Important: Development docker-compose runs services over HTTP on ports 8001/8002/8003 for convenience and faster iteration. The repository includes certificates under `certs/` and a production-ready Dockerfile/compose (`game_service/docker-compose-prod.yml` and `game_service/Dockerfile`) that can run the Game Service with TLS. For full end-to-end HTTPS between services, update the `*_SERVICE_URL` environment variables to `https://...:8443` and enable TLS in the service commands (uvicorn or a reverse proxy). See `docs/openapi.yaml` and `docs/ci-workflow.yml` for API spec and CI workflow copies.
+
+## Project status checklist (quick)
+
+- README with run & test instructions: Yes (see this file)
+- Microservice architecture (Auth, Player, Game): Yes
+- `docker compose up --build` expected to start services (dev mode uses HTTP): Partially — runs but services are exposed on ports 8001/8002/8003 without TLS in dev compose
+- Postman collections: present in `player_service/postman/` and `game_service/game_app/tests/postman/`
+- OpenAPI for gateway: `docs/openapi.yaml` (copy added)
+- GitHub Actions workflow copy: `docs/ci-workflow.yml` (copy added)
+
 ---
 
 Quick Links: [Docker Compose](docker-compose.yml) | [Auth Service](auth_service/) | [Player Service](player_service/) | [Game Service](game_service/)

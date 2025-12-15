@@ -22,6 +22,13 @@ PLAYER_SERVICE_URL = os.getenv(
 )
 
 # ============================================================
+# TLS / CA BUNDLE
+# ============================================================
+# Path inside containers where the project's CA certificate is mounted.
+# Keep as separate config so it's easy to override in different environments.
+CA_BUNDLE_PATH = os.getenv("CA_BUNDLE_PATH", "/certs/ca.crt")
+
+# ============================================================
 # TIMEOUT CONFIGURATION
 # ============================================================
 
@@ -64,4 +71,3 @@ PLAYER_ENDPOINTS = {
 
 # Player Service API Key for service-to-service authentication
 SERVICE_API_KEY = os.getenv("SERVICE_API_KEY", "default_key")
-
