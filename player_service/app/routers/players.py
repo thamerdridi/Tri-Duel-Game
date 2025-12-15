@@ -214,7 +214,6 @@ def get_player_match_detail(
     summary = _match_to_summary(match, db)
     return MatchDetailOut(
         **summary.model_dump(),
-        moves_log=match.moves_log,
         turns=turn_out,
     )
 

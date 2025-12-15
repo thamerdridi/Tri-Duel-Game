@@ -94,7 +94,6 @@ def test_game_service_post_match_with_internal_api_key(client, monkeypatch):
         "player1_score": 1,
         "player2_score": 0,
         "external_match_id": "match-1",
-        "moves_log": "turn 1: alice played Rock 1; bob played Paper 2; bob wins",
         "turns": [
             {
                 "turn_number": 1,
@@ -125,4 +124,3 @@ def test_game_service_post_match_with_internal_api_key(client, monkeypatch):
     detail = client.get(f"/players/alice/matches/{match_id}")
     assert detail.status_code == 200
     assert detail.json()["turns"][0]["player1_card_name"] == "Rock 1"
-    assert detail.json()["moves_log"] is not None
