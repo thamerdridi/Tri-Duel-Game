@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 VERBOSE="${VERBOSE:-1}"
+HTTP_LOG_BODY="${HTTP_LOG_BODY:-0}"
 
 if ! command -v curl >/dev/null 2>&1; then
   echo "curl is required" >&2
@@ -104,7 +105,7 @@ http() {
 
   if [ "$VERBOSE" != "0" ]; then
     log "$method $url -> $code"
-    if [ -n "$body" ]; then
+    if [ "$HTTP_LOG_BODY" != "0" ] && [ -n "$body" ]; then
       echo "$body" | pretty_json >&2
     fi
   fi
