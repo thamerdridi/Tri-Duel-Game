@@ -1,5 +1,3 @@
-from fastapi import HTTPException
-
 def set_user(client, sub: str) -> None:
     from app import auth as auth_module
 
@@ -7,17 +5,6 @@ def set_user(client, sub: str) -> None:
         return {"sub": sub, "user_id": 1}
 
     client.app.dependency_overrides[auth_module.get_current_user] = override_get_current_user
-
-
-def set_game_service(client, sub: str = "game_service") -> None:
-    from app import auth as auth_module
-
-    async def override_require_game_service_jwt():
-        return {"sub": sub, "user_id": 999}
-
-    client.app.dependency_overrides[auth_module.require_game_service_jwt] = (
-        override_require_game_service_jwt
-    )
 
 
 def test_health_ok(client):
@@ -63,14 +50,7 @@ def test_list_player_matches_invalid_player(client):
     assert resp.status_code == 404
 
 
-def test_post_match_requires_game_service(client):
-    from app import auth as auth_module
-
-    async def forbidden():
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    client.app.dependency_overrides[auth_module.require_game_service_jwt] = forbidden
-
+def test_post_match_requires_internal_api_key(client):
     payload = {
         "player1_external_id": "alice",
         "player2_external_id": "bob",
@@ -81,12 +61,18 @@ def test_post_match_requires_game_service(client):
         "turns": [],
     }
     resp = client.post("/matches", json=payload)
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 def test_post_match_validation_error(client):
-    set_game_service(client)
-    resp = client.post("/matches", json={})
+    from app import auth as auth_module
+    auth_module.PLAYER_INTERNAL_API_KEY = "test_key"
+
+    resp = client.post(
+        "/matches",
+        headers={"X-Internal-Api-Key": "test_key"},
+        json={},
+    )
     assert resp.status_code == 422
 
 
@@ -96,7 +82,9 @@ def test_post_match_idempotent_and_history(client):
     set_user(client, "bob")
     client.post("/players", json={"username": "Bob"})
 
-    set_game_service(client)
+    from app import auth as auth_module
+    auth_module.PLAYER_INTERNAL_API_KEY = "test_key"
+
     payload = {
         "player1_external_id": "alice",
         "player2_external_id": "bob",
@@ -104,6 +92,7 @@ def test_post_match_idempotent_and_history(client):
         "player1_score": 3,
         "player2_score": 1,
         "external_match_id": "match-123",
+        "moves_log": "turn 1: alice played Rock 1; bob played Paper 2; bob wins",
         "turns": [
             {
                 "turn_number": 1,
@@ -114,11 +103,19 @@ def test_post_match_idempotent_and_history(client):
         ],
     }
 
-    r1 = client.post("/matches", json=payload)
+    r1 = client.post(
+        "/matches",
+        headers={"X-Internal-Api-Key": "test_key"},
+        json=payload,
+    )
     assert r1.status_code == 201
     match_id = r1.json()["id"]
 
-    r2 = client.post("/matches", json=payload)
+    r2 = client.post(
+        "/matches",
+        headers={"X-Internal-Api-Key": "test_key"},
+        json=payload,
+    )
     assert r2.status_code == 201
     assert r2.json()["id"] == match_id
 
@@ -133,6 +130,7 @@ def test_post_match_idempotent_and_history(client):
     assert body["external_match_id"] == "match-123"
     assert len(body["turns"]) == 1
     assert body["turns"][0]["player1_card_name"] == "Rock 1"
+    assert body["moves_log"] is not None
 
 
 def test_get_match_detail_invalid_match(client):

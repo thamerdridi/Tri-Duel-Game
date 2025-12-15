@@ -11,6 +11,7 @@
     { "key": "player2_username", "value": "player2" },
     { "key": "game_service_username", "value": "game_service" },
     { "key": "password", "value": "pass123" },
+    { "key": "player_internal_api_key", "value": "change_me" },
     { "key": "player1_token", "value": "" },
     { "key": "player2_token", "value": "" },
     { "key": "game_service_token", "value": "" },
@@ -257,17 +258,17 @@
           ]
         },
         {
-          "name": "Post match (valid - Game Service token)",
+          "name": "Post match (valid - internal API key)",
           "request": {
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{game_service_token}}" }
+              { "key": "X-Internal-Api-Key", "value": "{{player_internal_api_key}}" }
             ],
             "url": { "raw": "{{player_base_url}}/matches", "host": ["{{player_base_url}}"], "path": ["matches"] },
             "body": {
               "mode": "raw",
-              "raw": "{\"player1_external_id\":\"{{player1_username}}\",\"player2_external_id\":\"{{player2_username}}\",\"winner_external_id\":\"{{player1_username}}\",\"player1_score\":3,\"player2_score\":2,\"external_match_id\":\"pm-match-1\",\"turns\":[{\"turn_number\":1,\"player1_card_name\":\"Rock 1\",\"player2_card_name\":\"Paper 2\",\"winner_external_id\":\"{{player1_username}}\"}]}"
+              "raw": "{\"player1_external_id\":\"{{player1_username}}\",\"player2_external_id\":\"{{player2_username}}\",\"winner_external_id\":\"{{player1_username}}\",\"player1_score\":3,\"player2_score\":2,\"external_match_id\":\"pm-match-1\",\"moves_log\":\"turn 1: {{player1_username}} played Rock 1; {{player2_username}} played Paper 2; {{player2_username}} wins\",\"turns\":[{\"turn_number\":1,\"player1_card_name\":\"Rock 1\",\"player2_card_name\":\"Paper 2\",\"winner_external_id\":\"{{player2_username}}\"}]}"
             }
           },
           "event": [
@@ -297,12 +298,12 @@
           ]
         },
         {
-          "name": "Post match (invalid - user token)",
+          "name": "Post match (invalid - wrong API key)",
           "request": {
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{player1_token}}" }
+              { "key": "X-Internal-Api-Key", "value": "wrong" }
             ],
             "url": { "raw": "{{player_base_url}}/matches", "host": ["{{player_base_url}}"], "path": ["matches"] },
             "body": {
@@ -311,7 +312,7 @@
             }
           },
           "event": [
-            { "listen": "test", "script": { "exec": ["pm.test('User token returns 403', function () { pm.response.to.have.status(403); });"] } }
+            { "listen": "test", "script": { "exec": ["pm.test('Wrong API key returns 403', function () { pm.response.to.have.status(403); });"] } }
           ]
         },
         {

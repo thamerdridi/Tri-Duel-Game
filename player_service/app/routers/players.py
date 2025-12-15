@@ -178,7 +178,11 @@ def get_player_match_detail(
         )
 
     summary = _match_to_summary(match, db)
-    return MatchDetailOut(**summary.model_dump(), turns=turn_out)
+    return MatchDetailOut(
+        **summary.model_dump(),
+        moves_log=match.moves_log,
+        turns=turn_out,
+    )
 
 
 @router.get("/leaderboard", response_model=List[LeaderboardEntry])

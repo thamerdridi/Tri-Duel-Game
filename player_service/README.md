@@ -37,7 +37,7 @@ Docs: `http://localhost:8002/docs` (or `https://localhost:8002/docs` when TLS is
 - Profiles are not auto-created: create them via `POST /players` before recording matches.
 - Match history is append-only: no update/delete endpoints for matches.
 - Idempotency: `external_match_id` prevents duplicate match inserts.
-- Internal auth: `POST /matches` requires a JWT where `sub == GAME_SERVICE_SUBJECT` (default `game_service`).
+- Internal auth: `POST /matches` requires `X-Internal-Api-Key` (set `PLAYER_INTERNAL_API_KEY`).
 
 ## Testing
 

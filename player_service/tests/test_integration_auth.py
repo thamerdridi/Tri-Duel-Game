@@ -67,13 +67,12 @@ def test_profile_invalid_token_rejected(client, monkeypatch):
     assert resp.status_code == 401
 
 
-def test_game_service_post_match_with_jwt(client, monkeypatch):
+def test_game_service_post_match_with_internal_api_key(client, monkeypatch):
     _patch_auth_validation(
         monkeypatch,
         valid_tokens={
             "alice_token": {"sub": "alice", "user_id": 1},
             "bob_token": {"sub": "bob", "user_id": 2},
-            "game_token": {"sub": "game_service", "user_id": 999},
         },
     )
 
@@ -95,6 +94,7 @@ def test_game_service_post_match_with_jwt(client, monkeypatch):
         "player1_score": 1,
         "player2_score": 0,
         "external_match_id": "match-1",
+        "moves_log": "turn 1: alice played Rock 1; bob played Paper 2; bob wins",
         "turns": [
             {
                 "turn_number": 1,
@@ -105,21 +105,24 @@ def test_game_service_post_match_with_jwt(client, monkeypatch):
         ],
     }
 
-    ok = client.post(
-        "/matches",
-        headers={"Authorization": "Bearer game_token"},
-        json=payload,
-    )
+    from app import auth as auth_module
+    auth_module.PLAYER_INTERNAL_API_KEY = "test_key"
+
+    ok = client.post("/matches", headers={"X-Internal-Api-Key": "test_key"}, json=payload)
     assert ok.status_code == 201
     match_id = ok.json()["id"]
 
+    missing = client.post("/matches", json=payload | {"external_match_id": "match-2"})
+    assert missing.status_code == 401
+
     forbidden = client.post(
         "/matches",
-        headers={"Authorization": "Bearer alice_token"},
-        json=payload | {"external_match_id": "match-2"},
+        headers={"X-Internal-Api-Key": "wrong"},
+        json=payload | {"external_match_id": "match-3"},
     )
     assert forbidden.status_code == 403
 
     detail = client.get(f"/players/alice/matches/{match_id}")
     assert detail.status_code == 200
     assert detail.json()["turns"][0]["player1_card_name"] == "Rock 1"
+    assert detail.json()["moves_log"] is not None

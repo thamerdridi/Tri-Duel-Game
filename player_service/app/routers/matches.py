@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..auth import require_game_service_jwt
+from ..auth import require_internal_api_key
 from ..db import get_db
 from ..models import PlayerProfile, Match, MatchTurn
 from ..schemas import MatchCreate
@@ -28,7 +28,7 @@ def get_player(external_id: str, db: Session) -> PlayerProfile:
 def create_match(
     payload: MatchCreate,
     db: Session = Depends(get_db),
-    _: dict = Depends(require_game_service_jwt),
+    _: None = Depends(require_internal_api_key),
 ):
     p1 = get_player(payload.player1_external_id, db)
     p2 = get_player(payload.player2_external_id, db)
@@ -55,6 +55,7 @@ def create_match(
         winner_id=winner_id,
         player1_score=payload.player1_score,
         player2_score=payload.player2_score,
+        moves_log=payload.moves_log,
     )
     db.add(match)
 
