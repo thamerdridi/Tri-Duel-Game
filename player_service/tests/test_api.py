@@ -92,7 +92,6 @@ def test_post_match_idempotent_and_history(client):
         "player1_score": 3,
         "player2_score": 1,
         "external_match_id": "match-123",
-        "moves_log": "turn 1: alice played Rock 1; bob played Paper 2; bob wins",
         "turns": [
             {
                 "turn_number": 1,
@@ -130,7 +129,6 @@ def test_post_match_idempotent_and_history(client):
     assert body["external_match_id"] == "match-123"
     assert len(body["turns"]) == 1
     assert body["turns"][0]["player1_card_name"] == "Rock 1"
-    assert body["moves_log"] is not None
 
 
 def test_get_match_detail_invalid_match(client):
@@ -145,3 +143,21 @@ def test_leaderboard_ok(client):
     resp = client.get("/leaderboard")
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
+
+
+def test_internal_sync_requires_api_key(client):
+    resp = client.post("/internal/players", json={"external_id": "alice"})
+    assert resp.status_code == 401
+
+
+def test_internal_sync_ok(client):
+    from app import auth as auth_module
+    auth_module.PLAYER_INTERNAL_API_KEY = "test_key"
+
+    resp = client.post(
+        "/internal/players",
+        headers={"X-Internal-Api-Key": "test_key"},
+        json={"external_id": "alice", "username": "Alice"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["external_id"] == "alice"

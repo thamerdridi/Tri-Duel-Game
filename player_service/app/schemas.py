@@ -16,6 +16,11 @@ class PlayerProfileUpdate(BaseModel):
     username: Optional[str] = None
 
 
+class PlayerProfileSync(BaseModel):
+    external_id: str
+    username: Optional[str] = None
+
+
 class MatchSummaryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -44,7 +49,6 @@ class MatchTurnOut(BaseModel):
 
 
 class MatchDetailOut(MatchSummaryOut):
-    moves_log: Optional[str] = None
     turns: list[MatchTurnOut]
 
 
@@ -55,7 +59,6 @@ class MatchCreate(BaseModel):
     player1_score: int
     player2_score: int
     external_match_id: str
-    moves_log: Optional[str] = None
     turns: list[MatchTurnCreate] = Field(default_factory=list)
 
 

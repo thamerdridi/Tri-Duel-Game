@@ -122,6 +122,35 @@ paths:
         "404":
           description: Player not found
 
+  /internal/players:
+    post:
+      summary: Create or update a player profile (internal)
+      tags: [Player]
+      security:
+        - internalApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [external_id]
+              properties:
+                external_id:
+                  type: string
+                username:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Profile updated
+        "201":
+          description: Profile created
+        "401":
+          description: API key missing
+        "403":
+          description: API key invalid
+
   /matches:
     post:
       summary: Create match record (for statistics)
@@ -155,10 +184,6 @@ paths:
                 external_match_id:
                   type: string
                   description: Idempotency key.
-                moves_log:
-                  type: string
-                  nullable: true
-                  description: Optional pre-formatted match moves log.
                 turns:
                   type: array
                   items:

@@ -1,14 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    DateTime,
-    ForeignKey,
-    SmallInteger,
-    Text,
-)
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, SmallInteger
 from sqlalchemy.orm import relationship
 
 from .db import Base
@@ -35,8 +27,6 @@ class Match(Base):
 
     player1_score = Column(SmallInteger, default=0, nullable=False)
     player2_score = Column(SmallInteger, default=0, nullable=False)
-
-    moves_log = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
