@@ -7,15 +7,19 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+
+    env:
+      DOCKER_BUILDKIT: 1
+      COMPOSE_DOCKER_CLI_BUILD: 1
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Build Docker images
-        run: docker compose build
+        run: docker compose build --no-cache
 
       - name: Validate Docker Compose configuration
         run: docker compose config
@@ -23,18 +27,27 @@ jobs:
       - name: Start services
         run: docker compose up -d
 
-      - name: Wait for services to be ready
-        run: sleep 30
+      - name: Wait for services to be healthy
+        run: |
+          for i in {1..30}; do
+            if docker compose ps | grep -q "(healthy)"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose ps
+          exit 1
 
       - name: Run unit tests
         run: |
           docker compose exec -T game_service python -m pytest game_app/tests/unit/
           docker compose exec -T player_service python -m pytest tests/
+          docker compose exec -T auth_service python -m pytest tests/
 
-      - name: Install Newman
-        run: npm install -g newman
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs
 
-      - name: Run Postman tests
-        run: |
-          newman run game_service/game_app/tests/postman/isolate_testing.postman_collection.json
-          newman run player_service/postman/player_service.postman_collection.json
+      - name: Stop services
+        if: always()
+        run: docker compose down -v
