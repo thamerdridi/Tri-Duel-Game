@@ -4,15 +4,20 @@ Player profiles + match history + leaderboard.
 
 ## Run
 
-### Local (SQLite)
+### Recommended (full system via Gateway)
+
+From the repo root:
 
 ```bash
-cd player_service
-pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8002
+docker compose up -d --build
 ```
 
-### Docker (PostgreSQL + self-signed HTTPS)
+- Base URL (via Gateway): `https://localhost:8443/player`
+- Swagger UI (via Gateway): `https://localhost:8443/player/docs`
+
+### Standalone (dev)
+
+This starts Player Service + its own Postgres (and an Auth container for token validation).
 
 ```bash
 cd player_service
@@ -22,29 +27,33 @@ docker compose up --build
 
 - Base URL: `https://localhost:8002`
 - Reset DB (dev): `docker compose down -v`
-- Required env: `PLAYER_SERVICE_API_KEY` (in `../.env` or exported in your shell)
 
 ## Endpoints
 
 - `GET /health` (public)
-- `POST /internal/players` (internal; API key; create/update profiles for service-to-service integration)
+- `POST /internal/players` (internal; API key; create/update profiles)
 - `POST /players`, `GET /players/me` (JWT required; token validated via Auth Service)
-- `GET /players/{external_id}/matches`, `GET /players/{external_id}/matches/{match_id}` (public; match details include ordered `turns` with `player1_card_name`/`player2_card_name`)
+- `GET /players/{external_id}/matches`, `GET /players/{external_id}/matches/{match_id}` (public)
 - `GET /leaderboard` (public)
 - `POST /matches` (internal; Game Service only)
 
-Docs: `http://localhost:8002/docs` (or `https://localhost:8002/docs` when TLS is enabled).
+## Configuration
 
-## Rules we enforce
-
-- Profiles are not auto-created: create them via `POST /players` before recording matches.
-- Service integration: use `POST /internal/players` (API key) to ensure profiles exist before posting matches.
-- Match history is append-only: no update/delete endpoints for matches.
-- Idempotency: `external_match_id` prevents duplicate match inserts.
-- Internal auth: `POST /matches` requires `X-Internal-Api-Key` (set `PLAYER_SERVICE_API_KEY`).
+- `PLAYER_SERVICE_API_KEY` is required for internal endpoints (`/internal/players`, `/matches`).
+- When `AUTH_SERVICE_URL` is `https://...`, the service enforces TLS verification using `CA_BUNDLE_PATH`.
 
 ## Testing
 
-Postman collection: `postman/player_service.postman_collection.json`
+### Pytest
 
-OpenAPI spec (repo root): `openapi.yaml`
+```bash
+cd player_service
+pytest -v
+```
+
+### Postman / Newman
+
+Collection: `postman/player_service.postman_collection.json`
+
+- Full system (Gateway): set `auth_base_url=https://localhost:8443/auth` and `player_base_url=https://localhost:8443/player`.
+- TLS verification: import `certs/ca/ca.crt` into Postman, or run Newman with `NODE_EXTRA_CA_CERTS=certs/ca/ca.crt`.
