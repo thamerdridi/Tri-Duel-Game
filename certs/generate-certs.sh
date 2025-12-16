@@ -45,7 +45,7 @@ if [[ ! -f "$CA_KEY" || ! -f "$CA_CERT" ]]; then
     -sha256 \
     -days "$DAYS_CA" \
     -out "$CA_CERT" \
-    -subj "/CN=internal-ca"
+    -subj "//CN=internal-ca"
 
   log "CA generated"
 else

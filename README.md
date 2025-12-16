@@ -13,7 +13,7 @@ Before running the application, prepare the environment:
    cp .env.example .env
    ```
 
-2. Generate SSL certificates for secure communication:
+2. Generate SSL certificates for secure communication (make sure to run it in bash (ex git bash) - may not work in powershell - if in doubt run it in powershell 6 or 7 times so it can generate all the certificates) :
    ```bash
    ./certs/generate-certs.sh
    ```
@@ -76,10 +76,12 @@ Manually verify each service:
 ```bash
 curl http://localhost:8001/health  # Auth Service - Should return {"status":"ok"}
 curl http://localhost:8002/health  # Player Service - Should return {"status":"ok"}
-curl http://localhost:8003/        # Game Service - Should return {"status":"ok"}
+curl http://localhost:8003/health  # Game Service - Should return {"status":"ok"}
 ```
 
 ## Playing a Complete Match
+
+### For running this with Postman - just copy the steps with injecting the tokens where needed.
 
 ### Step 1: Register Two Players
 
@@ -87,12 +89,12 @@ curl http://localhost:8003/        # Game Service - Should return {"status":"ok"
 # Register player 1
 curl -X POST https://localhost:8443/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"username": "player1", "email": "player1@test.com", "password": "pass123"}'
+  -d '{"username": "player1", "email": "player1@test.com", "password": "Password123!"}'
 
 # Register player 2
 curl -X POST https://localhost:8443/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"username": "player2", "email": "player2@test.com", "password": "pass456"}'
+  -d '{"username": "player2", "email": "player2@test.com", "password": "Password123!"}'
 ```
 
 ### Step 2: Login as Player 1 (Get JWT Token)
@@ -100,7 +102,15 @@ curl -X POST https://localhost:8443/auth/register \
 ```bash
 curl -X POST https://localhost:8443/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "player1", "password": "pass123"}'
+  -d '{"username": "player1", "password": "Password123!"}'
+```
+
+### Step 2.2: Login as Player 2 (Get JWT Token)
+
+```bash
+curl -X POST https://localhost:8443/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "player2", "password": "Password123!"}'
 ```
 
 Copy the `access_token` from the response.
@@ -109,7 +119,7 @@ Copy the `access_token` from the response.
 ### Step 3: View Available Cards
 
 ```bash
-curl https://localhost:8443/cards
+curl https://localhost:8443/game/cards
 ```
 
 This endpoint returns an SVG. Open it in a browser for the full deck view, and use `/cards/{id}` for single-card view.
@@ -117,7 +127,7 @@ This endpoint returns an SVG. Open it in a browser for the full deck view, and u
 ### Step 4: Start a Match
 
 ```bash
-curl -X POST https://localhost:8443/matches/ \
+curl -X POST https://localhost:8443/game/matches/ \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -130,16 +140,16 @@ Save the `match_id` from the response. Also note the `hand` cards returned - eac
 
 ### Step 5: Play Rounds (Best of 5)
 
-Players take turns playing cards. Use the `match_card_id` from your hand (not the card `id`).
+Players take turns playing cards. Use the `card_index` from your hand (not the card `id`).
 
 ```bash
 # Player 1 plays a card
-curl -X POST https://localhost:8443/matches/MATCH_ID_HERE/move \
+curl -X POST https://localhost:8443/game/matches/MATCH_ID_HERE/move \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
     "player_id": "player1",
-    "match_card_id": 1
+    "card_index": 0
   }'
 
 # Player 2 plays a card (round completes and shows result)
@@ -148,43 +158,28 @@ curl -X POST https://localhost:8443/matches/MATCH_ID_HERE/move \
   -H "Content-Type: application/json" \
   -d '{
     "player_id": "player2",
-    "match_card_id": 6
+    "card_index": 1
   }'
 
-# Continue alternating until match ends (first to 3 round wins)
+# Continue alternating until match ends (5 rounds) or surrender using the following command:
+curl -X POST https://localhost:8443/game/matches/MATCH_ID_HERE/surrender \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" 
 ```
 
 ### Step 6: View Match Results
 
+This is done to see the match state during or after the match:
+
 ```bash
 # Get match state from Game Service
-curl "https://localhost:8443/matches/MATCH_ID_HERE?player_id=player1" \
+curl "https://localhost:8443/game/matches/MATCH_ID_HERE?player_id=player1" \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 
-### Step 7: Record Match in Player Service (for statistics)
+### Step 7: View statistics in Player Service
 
-After a match completes, record it in the Player Service for leaderboard tracking:
+After a match completes, it records it in the Player Service for leaderboard tracking:
 
-```bash
-# Manually submit match result to Player Service
-curl -X POST https://localhost:8443/matches \
-  -H "X-Internal-Api-Key: PLAYER_INTERNAL_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "player1_external_id": "player1",
-    "player2_external_id": "player2",
-    "winner_external_id": "player1",
-    "player1_score": 3,
-    "player2_score": 2,
-    "external_match_id": "MATCH_ID_HERE",
-    "turns": [
-      { "turn_number": 1, "player1_card_name": "Rock 1", "player2_card_name": "Paper 2", "winner_external_id": "player2" }
-    ]
-  }'
-```
-
-### Step 8: View Statistics
 
 ```bash
 # View player match history
@@ -215,33 +210,37 @@ curl https://localhost:8443/leaderboard
 - Each player gets 5 cards from the deck
 - Players alternate playing cards until match ends
 
-## Service Endpoints
+## Service Endpoints (see full list in Openapi file)
 
 ### Auth Service (Port 8001)
 ```
 POST /auth/register  - Register new user
 POST /auth/login     - Get JWT token
 GET  /auth/validate  - Validate token
-GET  /health         - Health check
 ```
 
 ### Player Service (Port 8002)
 ```
-POST /players                      - Create/update my profile (protected)
-GET  /players/me                   - Get my profile (protected)
-POST /matches                      - Create match record (internal, Game Service only)
-GET  /players/{external_id}/matches - Get player match history (public)
-GET  /players/{external_id}/matches/{match_id} - Get match details (public)
-GET  /leaderboard                  - Get global rankings (public)
-GET  /health                       - Health check
+POST /player/players                      - Create/update my profile (protected)
+GET  /player/players/me                   - Get my profile (protected)
+POST /player/matches                      - Create match record (internal, Game Service only)
+GET  /player/players/{external_id}/matches - Get player match history (public)
+GET  /player/players/{external_id}/matches/{match_id} - Get match details (public)
+GET  /player/leaderboard                  - Get global rankings (public)
+GET  /player/health                       - Health check
 ```
 
 ### Game Service (Port 8003)
 ```
-POST /matches/                    - Start new match (protected)
-POST /matches/{id}/move           - Submit a card move (protected)
-GET  /matches/{id}?player_id=...  - Get match state (protected)
-GET  /                            - Health check
+POST /game/matches/                   - Start new match (protected)
+GET  /game/matches/{id}                - Get match state (protected)
+POST /game/matches/{id}/move           - Submit a card move (protected)
+GET  /game/matches/active              - Get active matches for user (protected)
+POST /game/matches/{id}/surrender      - Surrender match (protected)
+GET  /game/cards                       - Get deck gallery (SVG, public)
+GET  /game/cards/{id}                  - Get card detail (SVG, public)
+GET  /game/matches/{id}/hand           - Get player's hand (SVG, protected)
+GET  /game/health                      - Health check
 ```
 
 ## Development Commands
@@ -268,11 +267,13 @@ sudo docker-compose down -v
 ## API Documentation
 
 Interactive Swagger docs:
-- Auth: http://localhost:8001/docs
-- Player: http://localhost:8002/docs
-- Game: http://localhost:8003/docs
+- Auth: https://localhost:8443/docs
 
 ## Testing
+
+All tests are in /docs folder as Postman collections for each service.
+
+Additionally we have also pytest unit/integration tests inside each service folder under `tests/`.
 
 To run tests, you would need to install Python dependencies locally (not required for Docker deployment):
 

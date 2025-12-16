@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Tri-Duel Game API
   version: 1.0.0
-  description: Complete API specification for Auth, Player, and Game microservices
+  description: Complete API specification for Auth, Player, and Game microservices. Use with API Gateway as main entry point.
   contact:
     name: Development Team
   license:
@@ -324,6 +324,32 @@ paths:
                     type: string
         "401":
           description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      summary: Logout and blacklist token
+      tags: [Auth]
+      operationId: logout_user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+      responses:
+        "200":
+          description: Logged out successfully
+        "400":
+          description: Token already blacklisted
           content:
             application/json:
               schema:
