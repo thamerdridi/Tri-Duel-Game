@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "5ba5dc12-8f3b-4327-a4ab-8faa5b2f7232",
 		"name": "Tri-Duel Game Service",
-		"description": "Complete test collection for Game Service endpoints. Need test user 'alice' and correct JWT token written into env tab.\n\n## Features:\n\n- Match creation and management\n    \n- Move submission and validation\n    \n- Card visualization (SVG)\n    \n- Authentication tests\n    \n\n## Setup:\n\n1. Set base_url to Game Service URL\n    \n2. Set auth_token with JWT from Auth Service\n    \n3. Run collection in Postman\n    \n\nVersion: 1.0.1",
+		"description": "Complete test collection for Game Service endpoints. Need test user 'alice' and 'bob' and correct JWT token written into env tab.\n\n## Features:\n\n- Match creation and management\n    \n- Move submission and validation\n    \n- Card visualization (SVG)\n    \n- Authentication tests\n    \n\n## Setup:\n\n1. Set base_url to Game Service URL\n    \n2. Set auth_token with JWT from Auth Service (with registered 'alice' and 'bob')\n    \n3. Run collection in Postman\n    \n\nVersion: 1.0.1",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "49703585",
 		"_collection_link": "https://cypis-olejowy-7668800.postman.co/workspace/Cypis-1010's-Workspace~294f3157-2e01-4117-8728-bd7f2eeaf015/collection/49703585-5ba5dc12-8f3b-4327-a4ab-8faa5b2f7232?action=share&source=collection_link&creator=49703585"

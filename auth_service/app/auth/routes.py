@@ -6,6 +6,9 @@ from app.auth.jwt_handler import create_access_token, create_refresh_token, veri
 from app.models import User, RefreshToken, BlacklistedToken
 from app.schemas import UserCreate, UserLogin, UserOut, TokenResponse, RefreshTokenRequest
 from datetime import datetime, timedelta, timezone
+import httpx
+import os
+from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -27,6 +30,10 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     if user_exists:
         raise HTTPException(status_code=400, detail="Username already taken.")
 
+    email_exists = db.query(User).filter(User.email == user.email).first()
+    if email_exists:
+        raise HTTPException(status_code=400, detail="Email already registered.")
+
     new_user = User(
         username=user.username,
         email=user.email,
@@ -36,6 +43,20 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    # Sync user to Player Service
+    try:
+        verify = settings.CA_BUNDLE_PATH if os.path.exists(settings.CA_BUNDLE_PATH) else True
+        with httpx.Client(verify=verify) as client:
+            response = client.post(
+                f"{settings.PLAYER_SERVICE_URL}/internal/players",
+                json={"external_id": new_user.username, "username": new_user.username},
+                headers={"X-Internal-Api-Key": settings.SERVICE_API_KEY}
+            )
+            if response.status_code not in [200, 201]:
+                print(f"Failed to sync user to player service: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"Error syncing user to player service: {e}")
 
     return new_user
 

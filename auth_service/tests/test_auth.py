@@ -1,13 +1,26 @@
 import pytest
 from fastapi.testclient import TestClient
-from ..app.main import app
-from ..app.database import SessionLocal, engine
-from ..app.models import Base
+from app.main import app
+from app.database import SessionLocal, engine
+from app.models import Base, User, RefreshToken, BlacklistedToken
 
 # Create tables
 Base.metadata.create_all(bind=engine)
 
 client = TestClient(app)
+
+@pytest.fixture(autouse=True)
+def setup_database():
+    # Clear all data before each test
+    db = SessionLocal()
+    try:
+        # Delete in order to avoid foreign key issues
+        db.query(RefreshToken).delete()
+        db.query(BlacklistedToken).delete()
+        db.query(User).delete()
+        db.commit()
+    finally:
+        db.close()
 
 def test_register():
     response = client.post("/auth/register", json={
@@ -19,6 +32,12 @@ def test_register():
     assert response.json()["username"] == "testuser"
 
 def test_login():
+    # First register
+    client.post("/auth/register", json={
+        "username": "testuser",
+        "email": "test@example.com",
+        "password": "TestPass123"
+    })
     response = client.post("/auth/login", json={
         "username": "testuser",
         "password": "TestPass123"
@@ -28,7 +47,12 @@ def test_login():
     assert "refresh_token" in response.json()
 
 def test_refresh_token():
-    # First login to get refresh token
+    # First register and login to get refresh token
+    client.post("/auth/register", json={
+        "username": "testuser",
+        "email": "test@example.com",
+        "password": "TestPass123"
+    })
     login_resp = client.post("/auth/login", json={
         "username": "testuser",
         "password": "TestPass123"
@@ -40,7 +64,12 @@ def test_refresh_token():
     assert "access_token" in response.json()
 
 def test_logout():
-    # Login first
+    # First register and login
+    client.post("/auth/register", json={
+        "username": "testuser",
+        "email": "test@example.com",
+        "password": "TestPass123"
+    })
     login_resp = client.post("/auth/login", json={
         "username": "testuser",
         "password": "TestPass123"
@@ -55,7 +84,12 @@ def test_logout():
     assert validate_resp.status_code == 401
 
 def test_validate_token():
-    # Login
+    # First register and login
+    client.post("/auth/register", json={
+        "username": "testuser",
+        "email": "test@example.com",
+        "password": "TestPass123"
+    })
     login_resp = client.post("/auth/login", json={
         "username": "testuser",
         "password": "TestPass123"

@@ -17,6 +17,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ------------------------------------------------------------
+# Create non-root user
+# ------------------------------------------------------------
+RUN addgroup --system app && adduser --system --ingroup app app
+
+# ------------------------------------------------------------
 # TLS directories (certs are bind-mounted by docker-compose)
 # ------------------------------------------------------------
 RUN mkdir -p /certs/ca /certs/auth
@@ -25,7 +30,12 @@ RUN mkdir -p /certs/ca /certs/auth
 # Application code
 # (will be overridden by volume mount in docker-compose)
 # ------------------------------------------------------------
-COPY . .
+COPY --chown=app:app . .
+
+# ------------------------------------------------------------
+# Switch to non-root user
+# ------------------------------------------------------------
+USER app
 
 # ------------------------------------------------------------
 # Networking

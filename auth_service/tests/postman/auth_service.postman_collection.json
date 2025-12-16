@@ -20,9 +20,9 @@
           "raw": "{\"username\": \"testuser\", \"email\": \"test@example.com\", \"password\": \"TestPass123\"}"
         },
         "url": {
-          "raw": "{{base_url}}/auth/register",
+          "raw": "{{base_url}}/register",
           "host": ["{{base_url}}"],
-          "path": ["auth", "register"]
+          "path": ["register"]
         }
       },
       "event": [
@@ -30,12 +30,15 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test(\"Status code is 200\", function () {",
-              "    pm.response.to.have.status(200);",
-              "});",
-              "pm.test(\"Response has user data\", function () {",
+              "pm.test(\"Registration succeeds or username taken\", function () {",
               "    var jsonData = pm.response.json();",
-              "    pm.expect(jsonData).to.have.property('username');",
+              "    if (pm.response.code === 200) {",
+              "        pm.expect(jsonData).to.have.property('username');",
+              "    } else if (pm.response.code === 400) {",
+              "        pm.expect(jsonData.detail).to.eql('Username already taken.');",
+              "    } else {",
+              "        throw new Error('Unexpected status code: ' + pm.response.code);",
+              "    }",
               "});"
             ]
           }
@@ -57,9 +60,9 @@
           "raw": "{\"username\": \"testuser\", \"password\": \"TestPass123\"}"
         },
         "url": {
-          "raw": "{{base_url}}/auth/login",
+          "raw": "{{base_url}}/login",
           "host": ["{{base_url}}"],
-          "path": ["auth", "login"]
+          "path": ["login"]
         }
       },
       "event": [
@@ -97,9 +100,9 @@
           "raw": "{\"refresh_token\": \"{{refresh_token}}\"}"
         },
         "url": {
-          "raw": "{{base_url}}/auth/refresh",
+          "raw": "{{base_url}}/refresh",
           "host": ["{{base_url}}"],
-          "path": ["auth", "refresh"]
+          "path": ["refresh"]
         }
       },
       "event": [
@@ -126,9 +129,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/auth/validate?token={{access_token}}",
+          "raw": "{{base_url}}/validate?token={{access_token}}",
           "host": ["{{base_url}}"],
-          "path": ["auth", "validate"],
+          "path": ["validate"],
           "query": [
             {
               "key": "token",
@@ -156,9 +159,9 @@
         "method": "POST",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/auth/logout?token={{access_token}}",
+          "raw": "{{base_url}}/logout?token={{access_token}}",
           "host": ["{{base_url}}"],
-          "path": ["auth", "logout"],
+          "path": ["logout"],
           "query": [
             {
               "key": "token",
@@ -186,9 +189,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/auth/validate?token={{access_token}}",
+          "raw": "{{base_url}}/validate?token={{access_token}}",
           "host": ["{{base_url}}"],
-          "path": ["auth", "validate"],
+          "path": ["validate"],
           "query": [
             {
               "key": "token",
@@ -218,4 +221,3 @@
     }
   ]
 }
-

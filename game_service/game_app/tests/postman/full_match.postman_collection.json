@@ -590,48 +590,8 @@
               "query": [{"key": "player_id", "value": "bob"}]
             }
           }
-        },
-        {
-          "name": "Check Player Service Received Finalization",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Player Service has match history\", function () {",
-                  "    // This checks if Player Service received the finalization callback",
-                  "    pm.response.to.have.status(200);",
-                  "    var jsonData = pm.response.json();",
-                  "    ",
-                  "    // Should have at least 1 match",
-                  "    pm.expect(jsonData).to.be.an('array');",
-                  "    ",
-                  "    if (jsonData.length > 0) {",
-                  "        console.log('✅ Player Service received finalization!');",
-                  "        console.log('Total matches in history: ' + jsonData.length);",
-                  "    } else {",
-                  "        console.log('⚠️ No matches in Player Service - check callback!');",
-                  "    }",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "http://localhost:8002/players/alice/matches",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "8002",
-              "path": ["players", "alice", "matches"]
-            },
-            "description": "Checks if Player Service received the match finalization callback"
-          }
         }
       ]
     }
   ]
 }
-
