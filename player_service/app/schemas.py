@@ -1,95 +1,66 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
-
-# ========= Player profile =========
 
 class PlayerProfileOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     external_id: str
     username: str
-    bio: Optional[str] = None
-    country: Optional[str] = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class PlayerProfileUpdate(BaseModel):
     username: Optional[str] = None
-    bio: Optional[str] = None
-    country: Optional[str] = None
 
 
-# ========= Cards =========
+class PlayerProfileSync(BaseModel):
+    external_id: str
+    username: Optional[str] = None
 
-class CardOut(BaseModel):
-    id: int
-    category: str
-    power: int
-    name: str
-    description: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
-
-# ========= Match rounds =========
-
-class MatchRoundCreate(BaseModel):
-    round_number: int
-    player1_card_id: int
-    player2_card_id: int
-    winner_external_id: Optional[str] = None  # None = draw
-
-
-class MatchRoundOut(BaseModel):
-    round_number: int
-    player1_card: CardOut
-    player2_card: CardOut
-    winner_external_id: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
-
-# ========= Matches (history) =========
 
 class MatchSummaryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
+    external_match_id: str
     player1_external_id: str
     player2_external_id: str
     winner_external_id: Optional[str]
     player1_score: int
     player2_score: int
-    rounds_played: int
     created_at: datetime
-    finished_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+
+class MatchTurnCreate(BaseModel):
+    turn_number: int
+    player1_card_name: str
+    player2_card_name: str
+    winner_external_id: Optional[str] = None
+
+
+class MatchTurnOut(BaseModel):
+    turn_number: int
+    player1_card_name: str
+    player2_card_name: str
+    winner_external_id: Optional[str] = None
 
 
 class MatchDetailOut(MatchSummaryOut):
-    rounds: List[MatchRoundOut]
+    turns: list[MatchTurnOut]
 
 
 class MatchCreate(BaseModel):
-    """
-    Payload expected from Game Service when a match finishes.
-    """
     player1_external_id: str
     player2_external_id: str
     winner_external_id: Optional[str] = None
     player1_score: int
     player2_score: int
-    rounds: List[MatchRoundCreate]
-    seed: Optional[str] = None
+    external_match_id: str
+    turns: list[MatchTurnCreate] = Field(default_factory=list)
 
-
-# ========= Leaderboard =========
 
 class LeaderboardEntry(BaseModel):
     external_id: str

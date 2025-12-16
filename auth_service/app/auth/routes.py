@@ -7,6 +7,7 @@ from app.auth.jwt_handler import create_access_token, verify_token
 from app.models import User
 from app.schemas import UserCreate, UserLogin, UserOut
 from app.config import settings
+from fastapi import Header
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -104,8 +105,10 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 # ==========================
 # TOKEN VALIDATION
 # ==========================
+
 @router.get("/validate")
-def validate_token(token: str):
+def validate_token(authorization: str = Header(...)):
+    token = authorization.replace("Bearer ", "")
     payload = verify_token(token)
     if not payload:
         raise HTTPException(
@@ -113,3 +116,4 @@ def validate_token(token: str):
             detail="Invalid or expired token"
         )
     return payload
+

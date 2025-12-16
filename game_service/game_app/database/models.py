@@ -1,10 +1,7 @@
-import os
-import uuid
-from uuid import UUID
-
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from .database import Base
 from game_app.configs.cards_config import *
+import uuid  # Re-added to resolve unresolved reference for uuid
 
 DOMAIN_CARDS = os.getenv(
     "DOMAIN_CARDS",
@@ -36,7 +33,7 @@ class Match(Base):
     current_round = Column(Integer, nullable=False, default=1)
     points_p1 = Column(Integer, nullable=False, default=0)
     points_p2 = Column(Integer, nullable=False, default=0)
-    winner = Column(String, nullable=True)
+    winner = Column(String, nullable=True, default=None) # Ensure default=None for winner to match expected type
 
 
 class MatchCard(Base):
@@ -48,5 +45,20 @@ class MatchCard(Base):
     card_def_id = Column(ForeignKey("card_definitions.id"))
     used = Column(Boolean, default=False, nullable=False)
     round_used = Column(Integer, nullable=True)
+
+class MatchRound(Base):
+    __tablename__ = "match_rounds"
+
+    id = Column(Integer, primary_key=True, index=True)
+    match_id = Column(ForeignKey("matches.id", ondelete="CASCADE"))
+    match_card_p1 = Column(ForeignKey("match_cards.id"))
+    match_card_p2 = Column(ForeignKey("match_cards.id"))
+    winner_id = Column(String, nullable=True) # None -> draw
+    round_number = Column(Integer, nullable=False)
+    reason = Column(String, nullable=True)
+
+
+
+
 
 

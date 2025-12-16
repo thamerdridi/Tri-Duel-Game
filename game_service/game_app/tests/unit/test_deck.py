@@ -1,3 +1,58 @@
+"""
+==========================================
+DECK LOGIC UNIT TESTS
+==========================================
+
+PURPOSE:
+--------
+Pure unit tests for deck building and card dealing logic.
+Tests the deck.py module in complete isolation.
+
+WHAT IS TESTED:
+---------------
+1. Deck Building (build_deck):
+   - Creates Card objects from CardDefinition database models
+   - Includes only active card definitions
+   - Preserves card properties (id, category, power)
+
+2. Hand Dealing (deal_two_hands):
+   - Splits full deck into two equal hands
+   - Each player gets HAND_SIZE cards
+   - No duplicate cards between hands (unique distribution)
+   - Random shuffle ensures fairness
+
+HOW TO RUN:
+-----------
+These are PURE UNIT TESTS - no database, no services, no authentication required.
+
+Run all unit tests:
+    $ cd game_service
+    $ pytest game_app/tests/unit/ -v
+
+Run deck tests only:
+    $ pytest game_app/tests/unit/test_deck.py -v
+
+Run specific test:
+    $ pytest game_app/tests/unit/test_deck.py::test_build_deck_creates_18_cards -v
+
+FIXTURES USED:
+--------------
+None - these tests use FakeCardDef test doubles to avoid database dependency.
+
+TEST DOUBLES:
+-------------
+- `FakeCardDef`: Simulates CardDefinition database model
+  - Minimal implementation for testing
+  - No database required
+
+NOTES:
+------
+- These are TRUE UNIT TESTS - fastest to run
+- No external dependencies
+- Test pure Python logic
+- Use fake objects instead of real database models
+"""
+
 import pytest
 from game_app.logic.deck import build_deck, deal_two_hands
 

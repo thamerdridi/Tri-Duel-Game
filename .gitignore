@@ -33,9 +33,9 @@ test.db
 Thumbs.db
 
 # keys
-FERNET_KEY=idNYBr3t4Gf3V9qwgZMDvpazhnE8o7MwnRsof0O8BVU=
-JWT_PRIVATE_KEY_PATH=/app/keys/private.pem
-JWT_PUBLIC_KEY_PATH=/app/keys/public.pem
+keys/
+*.pem
+
 
 __pycache__/
 *.pyc
@@ -43,4 +43,3 @@ __pycache__/
 *.db
 .pytest_cache/
 .env
-

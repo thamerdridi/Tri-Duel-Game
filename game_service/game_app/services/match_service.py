@@ -1,12 +1,19 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from sqlalchemy import or_
+import logging
+import asyncio
 
 from game_app.configs.cards_config import DOMAIN_CARDS
-from game_app.database.models import Match, MatchCard, CardDefinition
+from game_app.database.models import Match, MatchCard, CardDefinition, MatchRound
 from game_app.configs.logic_configs import MAX_ROUNDS
+from game_app.configs.logging_config import log_if_enabled
 from game_app.logic.models import Card
 from game_app.logic.rps import rps_outcome
 from game_app.logic.deck import build_deck, deal_two_hands
+from game_app.clients.player_client import player_client
+
+logger = logging.getLogger(__name__)
 
 
 class MatchService:
@@ -18,6 +25,29 @@ class MatchService:
     # CREATE MATCH
     # ============================================================
     def create_match(self, player1_id: str, player2_id: str):
+        # Prevent creating a new match if either player already has an active match
+        active_p1 = (
+            self.db.query(Match)
+            .filter(
+                or_(Match.player1_id == player1_id, Match.player2_id == player1_id),
+                Match.status == "in_progress",
+            )
+            .first()
+        )
+        if active_p1:
+            raise ValueError(f"Player already in an active match: {player1_id}")
+
+        active_p2 = (
+            self.db.query(Match)
+            .filter(
+                or_(Match.player1_id == player2_id, Match.player2_id == player2_id),
+                Match.status == "in_progress",
+            )
+            .first()
+        )
+        if active_p2:
+            raise ValueError(f"Player already in an active match: {player2_id}")
+
         card_defs = (
             self.db.query(CardDefinition)
             .filter(CardDefinition.active == True)
@@ -48,6 +78,15 @@ class MatchService:
 
         self.db.commit()
         self.db.refresh(match)
+
+        # Security logging: Match creation
+        log_if_enabled(
+            logger,
+            "info",
+            f"✅ MATCH_CREATED | match_id={match.id} | "
+            f"player1={player1_id} | player2={player2_id} | status={match.status}"
+        )
+
         return match
 
     def _save_match_card(self, match_id, player_id, card: Card):
@@ -63,28 +102,77 @@ class MatchService:
     # ============================================================
     # SUBMIT MOVE
     # ============================================================
-    def submit_move(self, match_id: str, player_id: str, match_card_id: int):
+    def submit_move(self, match_id: str, player_id: str, card_index: int):
+        """
+        Submit a move using card index (0-4) from player's hand.
+
+        Args:
+            match_id: Match identifier
+            player_id: Player making the move
+            card_index: Index in hand (0-4)
+        """
         match = self.db.query(Match).filter_by(id=match_id).first()
         if not match:
+            log_if_enabled(
+                logger,
+                "warning",
+                f"❌ INVALID_MOVE | match_id={match_id} not found | player={player_id}"
+            )
             raise ValueError("Match not found")
 
         if match.status != "in_progress":
+            log_if_enabled(
+                logger,
+                "warning",
+                f"❌ INVALID_MOVE | match_id={match_id} already finished | player={player_id}"
+            )
             raise ValueError("Match already finished")
 
-        card = (
+        # Get player's available cards (not used yet) ordered by ID
+        available_cards = (
             self.db.query(MatchCard)
-            .filter_by(id=match_card_id, match_id=match_id, player_id=player_id)
-            .first()
+            .filter_by(match_id=match_id, player_id=player_id, used=False)
+            .order_by(MatchCard.id)
+            .all()
         )
 
-        if not card:
-            raise ValueError("Invalid card or player")
-        if card.used:
-            raise ValueError("Card already used")
+        # Validate card_index
+        if card_index < 0 or card_index >= len(available_cards):
+            log_if_enabled(
+                logger,
+                "warning",
+                f"❌ INVALID_MOVE | card_index={card_index} out of range | "
+                f"available={len(available_cards)} | match_id={match_id} | player={player_id}"
+            )
+            raise ValueError(
+                f"Card index {card_index} out of range. "
+                f"You have {len(available_cards)} cards available (indices 0-{len(available_cards)-1})"
+            )
+
+        # Get the card at the specified index
+        card = available_cards[card_index]
+
+        # Load card definition for logging
+        card_def = self.db.query(CardDefinition).filter_by(id=card.card_def_id).first()
+
+        log_if_enabled(
+            logger,
+            "debug",
+            f"✅ CARD_SELECTED | card_index={card_index} -> match_card_id={card.id} | "
+            f"card_type={card_def.category}_power_{card_def.power} | player={player_id}"
+        )
 
         card.used = True
         card.round_used = match.current_round
         self.db.commit()
+
+        # Security logging: Move submitted
+        log_if_enabled(
+            logger,
+            "info",
+            f"🎯 MOVE_SUBMITTED | match_id={match_id} | player={player_id} | "
+            f"card_id={card.id} | round={match.current_round}"
+        )
 
         other_card = (
             self.db.query(MatchCard)
@@ -120,12 +208,34 @@ class MatchService:
 
         result = rps_outcome(card1, card2)
 
+        # Create MatchRound record
+        match_round = MatchRound(
+            match_id=match.id,
+            match_card_p1=card_p1.id,
+            match_card_p2=card_p2.id,
+            winner_id=(match.player1_id if result.winner == "p1" else
+                        match.player2_id if result.winner == "p2" else None),
+            round_number=match.current_round,
+            reason=result.reason,
+        )
+
+        self.db.add(match_round)
+
         if result.winner == "p1":
             match.points_p1 += 1
         elif result.winner == "p2":
             match.points_p2 += 1
 
         match.current_round += 1
+
+        # Security logging: Round resolved
+        log_if_enabled(
+            logger,
+            "info",
+            f"⚔️ ROUND_RESOLVED | match_id={match.id} | round={match.current_round - 1} | "
+            f"winner={result.winner if result.winner else 'DRAW'} | "
+            f"score={match.points_p1}-{match.points_p2}"
+        )
 
         if match.current_round > MAX_ROUNDS:
             match.status = "finished"
@@ -139,6 +249,39 @@ class MatchService:
         self.db.commit()
         self.db.refresh(match)
 
+        # Finalize match if finished - notify player_service
+        if match.status == "finished":
+            # Security logging: Match finished
+            log_if_enabled(
+                logger,
+                "info",
+                f"🏁 MATCH_FINISHED | match_id={match.id} | "
+                f"winner={match.winner if match.winner else 'DRAW'} | "
+                f"final_score={match.points_p1}-{match.points_p2} | "
+                f"players={match.player1_id}_vs_{match.player2_id}"
+            )
+            try:
+                # Create async task for finalization (non-blocking)
+                asyncio.create_task(
+                    player_client.finalize_match(
+                        match_id=match.id,
+                        player1_id=match.player1_id,
+                        player2_id=match.player2_id,
+                        winner_id=match.winner,
+                        points_p1=match.points_p1,
+                        points_p2=match.points_p2,
+                        status=match.status,
+                        turns=self._format_rounds_for_player(match.id),
+                        external_match_id=match.id,
+                    )
+                )
+            except RuntimeError:
+                # If no event loop (sync context), log warning
+                logger.warning(
+                    f"⚠️ Cannot create async task for match {match.id} finalization. "
+                    f"Running in sync context - player stats may not be updated!"
+                )
+
         return {
             "round": match.current_round - 1,
             "winner": result.winner,
@@ -149,62 +292,131 @@ class MatchService:
             "match_winner": match.winner,
         }
 
-    # ============================================================
-    # GET PLAYER HAND (unused cards)
-    # ============================================================
-    def get_player_hand(self, match_id: str, player_id: str):
-        cards = (
-            self.db.query(MatchCard)
-            .filter_by(match_id=match_id, player_id=player_id, used=False)
+    def _get_match_rounds(self, match_id: str):
+        rounds = (
+            self.db.query(MatchRound)
+            .filter_by(match_id=match_id)
+            .order_by(MatchRound.round_number)
             .all()
         )
+        return rounds
 
-        card_defs = self.db.query(CardDefinition).all()
-        defs = {d.id: d for d in card_defs}
+    def _format_rounds_for_player(self, match_id: str):
+        """Format MatchRound records into payloads expected by Player Service.
 
+        - Builds card names from CardDefinition: "{category}_{power}"
+        - winner_id is already stored as external_id in MatchRound.winner_id
+        """
+        # Iterate MatchRound records and fetch related MatchCard and CardDefinition
+        formatted = []
+        match_rounds = self._get_match_rounds(match_id)
+        for r in match_rounds:
+            # fetch match cards
+            mc_p1 = self.db.get(MatchCard, r.match_card_p1)
+            mc_p2 = self.db.get(MatchCard, r.match_card_p2)
 
-        return [
-            {
-                "match_card_id": c.id,
-                "card": {
-                    domain_key: getattr(defs[c.card_def_id], db_field)
-                    for domain_key, db_field in DOMAIN_CARDS.items()
-                }
-            }
-            for c in cards
-        ]
+            # fetch card definitions
+            cd_p1 = self.db.get(CardDefinition, mc_p1.card_def_id) if mc_p1 else None
+            cd_p2 = self.db.get(CardDefinition, mc_p2.card_def_id) if mc_p2 else None
+
+            name_p1 = f"{cd_p1.category} {cd_p1.power}" if cd_p1 else ""
+            name_p2 = f"{cd_p2.category} {cd_p2.power}" if cd_p2 else ""
+
+            # In game_service MatchRound.winner_id stores external player id (string) or None
+            winner_external_id = r.winner_id
+
+            formatted.append({
+                "turn_number": r.round_number,
+                "player1_card_name": name_p1,
+                "player2_card_name": name_p2,
+                "winner_external_id": winner_external_id,
+            })
+
+        return formatted
 
     # ============================================================
-    # GET USED CARDS FOR ONE PLAYER
+    # GET PLAYER CARDS (universal method)
     # ============================================================
-    def get_used_cards_by_player(self, match_id: str, player_id: str):
-        used_cards = (
-            self.db.query(MatchCard)
-            .filter_by(match_id=match_id, player_id=player_id, used=True)
-            .all()
-        )
+    def get_player_cards(self, match_id: str, player_id: str, used_filter=None, format_type="api"):
+        """
+        Universal method to get player cards with flexible filtering and formatting.
 
-        # Load all card definitions
+        Args:
+            match_id: Match identifier
+            player_id: Player identifier
+            used_filter: None (all cards), True (only used), False (only available)
+            format_type: "api" (with DOMAIN_CARDS) or "visual" (for SVG rendering)
+
+        Returns:
+            List[Dict]: Cards in requested format
+        """
+        # Build query
+        query = self.db.query(MatchCard).filter_by(match_id=match_id, player_id=player_id)
+
+        # Apply used filter if specified
+        if used_filter is not None:
+            query = query.filter_by(used=used_filter)
+
+        cards = query.all()
+
+        # Load card definitions once
         card_defs = self.db.query(CardDefinition).all()
         defs = {d.id: d for d in card_defs}
 
         result = []
-        for c in used_cards:
-            card_def = defs[c.card_def_id]
 
-            # Dynamic domain card fields
-            card_dict = {
-                domain_key: getattr(card_def, db_field)
-                for domain_key, db_field in DOMAIN_CARDS.items()
-            }
+        if format_type == "visual":
+            # Format for SVG rendering (flat structure)
+            for match_card in cards:
+                card_def = defs[match_card.card_def_id]
+                result.append({
+                    "id": card_def.id,
+                    "category": card_def.category,
+                    "power": card_def.power,
+                    "used": match_card.used,
+                    "match_card_id": match_card.id,
+                    "round_used": match_card.round_used if match_card.used else None,
+                })
+            # Sort: available first, then by power descending
+            result.sort(key=lambda x: (x['used'], -x['power']))
 
-            result.append({
-                "match_card_id": c.id,
-                "card": card_dict,
-                "round_used": c.round_used,
-            })
+        else:  # format_type == "api"
+            # Format for API responses (nested structure with DOMAIN_CARDS)
+            for idx, match_card in enumerate(cards):
+                card_def = defs[match_card.card_def_id]
+
+                card_dict = {
+                    domain_key: getattr(card_def, db_field)
+                    for domain_key, db_field in DOMAIN_CARDS.items()
+                }
+
+                item = {
+                    "hand_index": idx,  # Add hand_index for easy card selection
+                    "card": card_dict,
+                }
+
+                # Add round_used for used cards
+                if match_card.used:
+                    item["round_used"] = match_card.round_used
+
+                result.append(item)
 
         return result
+
+    # ============================================================
+    # CONVENIENCE METHODS (wrappers around get_player_cards)
+    # ============================================================
+    def get_player_hand(self, match_id: str, player_id: str):
+        """Get available (unused) cards for API responses."""
+        return self.get_player_cards(match_id, player_id, used_filter=False, format_type="api")
+
+    def get_used_cards_by_player(self, match_id: str, player_id: str):
+        """Get used cards for API responses."""
+        return self.get_player_cards(match_id, player_id, used_filter=True, format_type="api")
+
+    def get_player_hand_with_used_status(self, match_id: str, player_id: str):
+        """Get all cards (used + available) for SVG visualization."""
+        return self.get_player_cards(match_id, player_id, used_filter=None, format_type="visual")
 
     # ============================================================
     # GET COMPLETE MATCH STATE
@@ -229,3 +441,64 @@ class MatchService:
             "opponent_used_cards": self.get_used_cards_by_player(match_id, opponent_id),
             "match_winner": match.winner,
         }
+
+    # ============================================================
+    # GET ACTIVE MATCHES FOR PLAYER
+    # ============================================================
+    def get_active_matches(self, player_id: str):
+        """Retrieve all active matches for a given player."""
+        active_matches = (
+            self.db.query(Match)
+            .filter(
+                or_(Match.player1_id == player_id, Match.player2_id == player_id),
+                Match.status == "in_progress",
+            )
+            .all()
+        )
+        return active_matches
+
+    # ============================================================
+    # SURRENDER MATCH
+    # ============================================================
+    def surrender_match(self, match_id: str, player_id: str):
+        """Mark the match as surrendered by the given player."""
+        match = self.db.query(Match).filter_by(id=match_id).first()
+        if not match:
+            raise ValueError("Match not found")
+
+        if match.status != "in_progress":
+            raise ValueError("Match is not active")
+
+        if match.player1_id == player_id:
+            match.winner = match.player2_id
+        elif match.player2_id == player_id:
+            match.winner = match.player1_id
+        else:
+            raise ValueError("Player is not part of this match")
+
+        match.status = "finished"
+        self.db.commit()
+        self.db.refresh(match)
+
+        # Notify player service about the surrendered match
+        try:
+            asyncio.create_task(
+                player_client.finalize_match(
+                    match_id=match.id,
+                    player1_id=match.player1_id,
+                    player2_id=match.player2_id,
+                    winner_id=match.winner,
+                    points_p1=match.points_p1,
+                    points_p2=match.points_p2,
+                    status=match.status,
+                    turns=self._format_rounds_for_player(match.id),
+                    external_match_id=match.id,
+                )
+            )
+        except RuntimeError:
+            logger.warning(
+                f"⚠️ Cannot create async task for match {match.id} finalization. "
+                f"Running in sync context - player stats may not be updated!"
+            )
+
+        return self.get_state(match_id, player_id)

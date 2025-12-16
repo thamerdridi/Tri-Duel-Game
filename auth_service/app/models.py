@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String
 from app.database import Base
-from app.config import fernet
+from app.config import settings
 
 class User(Base):
     __tablename__ = "users"
@@ -12,8 +12,8 @@ class User(Base):
 
     @property
     def email(self):
-        return fernet.decrypt(self._email.encode()).decode()
+        return settings.get_fernet().decrypt(self._email.encode()).decode()
 
     @email.setter
     def email(self, value):
-        self._email = fernet.encrypt(value.encode()).decode()
+        self._email = settings.get_fernet().encrypt(value.encode()).decode()

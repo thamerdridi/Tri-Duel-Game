@@ -8,6 +8,7 @@ WORKDIR /app
 # Install system dependencies (cryptography needs these)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    ca-certificates \
     libssl-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -16,6 +17,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
+
+# ------------------------------------------------------------
+# TLS directories (certs are bind-mounted by docker-compose)
+# ------------------------------------------------------------
+RUN mkdir -p /certs/ca /certs/auth
 
 # Copy application code
 COPY . .
@@ -28,4 +34,7 @@ USER appuser
 
 EXPOSE 8001
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+# ------------------------------------------------------------
+# Run with TLS
+# ------------------------------------------------------------
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--ssl-certfile", "/certs/auth_service/auth_service.crt", "--ssl-keyfile", "/certs/auth_service/auth_service.key"]
