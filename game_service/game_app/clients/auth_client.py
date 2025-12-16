@@ -16,7 +16,7 @@ from game_app.configs.client_config import (
     AUTH_ENDPOINTS,
     MAX_RETRY_ATTEMPTS,
     RETRY_BACKOFF_BASE,
-    CA_BUNDLE_PATH,
+    CA_BUNDLE_PATH, SERVICE_API_KEY,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,8 +38,7 @@ class AuthClient:
             self.verify = CA_BUNDLE_PATH
             logger.debug(f"Using CA bundle at {CA_BUNDLE_PATH} for TLS verification")
         else:
-            self.verify = True
-            logger.debug("No CA bundle found, using system default CA store for TLS verification")
+            raise RuntimeError("CA bundle not found at specified path for AuthClient TLS verification")
 
     async def verify_token(self, token: str) -> dict:
         """
@@ -60,10 +59,15 @@ class AuthClient:
 
         for attempt in range(1, MAX_RETRY_ATTEMPTS + 1):
             try:
+                logger.error(f"TLS VERIFY VALUE = {self.verify}")
+                logger.error(f"CA EXISTS = {os.path.exists(self.verify)}")
+
                 async with httpx.AsyncClient(timeout=self.timeout, verify=self.verify) as client:
                     response = await client.get(
                         endpoint,
-                        params={"token": token}
+                        params={"token": token},
+                        headers = {"api-key": SERVICE_API_KEY},
+
                     )
 
                 if response.status_code == 200:

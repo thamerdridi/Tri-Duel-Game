@@ -2,31 +2,47 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system dependencies (curl for health checks, openssl for self-signed TLS)
+# ------------------------------------------------------------
+# System dependencies (curl for healthcheck, openssl for TLS)
+# ------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     openssl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# ------------------------------------------------------------
+# Python dependencies
+# ------------------------------------------------------------
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# ------------------------------------------------------------
 # Create non-root user
+# ------------------------------------------------------------
 RUN addgroup --system app && adduser --system --ingroup app app
 
-# Copy application code
+# ------------------------------------------------------------
+# Application code
+# ------------------------------------------------------------
 COPY --chown=app:app app/ ./app/
 
-# Entrypoint (TLS support)
-COPY --chown=app:app entrypoint.sh /usr/local/bin/player_service_entrypoint.sh
-RUN chmod +x /usr/local/bin/player_service_entrypoint.sh
+# ------------------------------------------------------------
+# Prepare directories for TLS cert bind mounts
+# (must exist before Docker mounts volumes)
+# ------------------------------------------------------------
+RUN mkdir -p /certs/ca /certs/player
 
-# Expose port
-EXPOSE 8002
-
-# Drop privileges
+# ------------------------------------------------------------
+# Switch to non-root user
+# ------------------------------------------------------------
 USER app
 
-# Run the application (optionally with TLS)
-ENTRYPOINT ["/usr/local/bin/player_service_entrypoint.sh"]
+# ------------------------------------------------------------
+# HTTPS port
+# ------------------------------------------------------------
+EXPOSE 8002
+
+# ------------------------------------------------------------
+# Run application with HTTPS (TLS always enabled)
+# ------------------------------------------------------------
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002", "--ssl-certfile", "/certs/player/player.crt", "--ssl-keyfile", "/certs/player/player.key"]

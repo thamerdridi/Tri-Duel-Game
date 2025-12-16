@@ -4,6 +4,13 @@
 *.swp
 *.swo
 
+# Certs and keys
+*.key
+*.csr
+*.crt
+# BUT allow public CA certificate (DEV)
+!certs/ca/ca.crt
+
 # Python
 __pycache__/
 *.py[cod]

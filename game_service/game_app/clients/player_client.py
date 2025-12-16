@@ -38,8 +38,7 @@ class PlayerClient:
             self.verify = CA_BUNDLE_PATH
             logger.debug(f"Using CA bundle at {CA_BUNDLE_PATH} for TLS verification")
         else:
-            self.verify = True
-            logger.debug("No CA bundle found, using system default CA store for TLS verification")
+            raise RuntimeError(f"No CA bundle at {CA_BUNDLE_PATH}")
 
     async def finalize_match(
         self,
