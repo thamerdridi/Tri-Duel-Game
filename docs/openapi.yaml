@@ -1,56 +1,247 @@
 openapi: 3.0.3
 info:
-  title: Card Game API
+  title: Tri-Duel Game API
   version: 1.0.0
-  description: API specification for Auth, Player, and Game services.
+  description: Complete API specification for Auth, Player, and Game microservices
+  contact:
+    name: Development Team
+  license:
+    name: MIT
 
 servers:
   - url: https://localhost:8443
-    description: API Gateway (HTTPS)
-  - url: http://localhost:8001
-    description: Auth Service
-  - url: http://localhost:8002
-    description: Player Service
-  - url: http://localhost:8003
-    description: Game Service
+    description: API Gateway (Main Entry Point)
+  - url: https://localhost:8001
+    description: Auth Service (Internal)
+  - url: https://localhost:8002
+    description: Player Service (Internal)
+  - url: https://localhost:8003
+    description: Game Service (Internal)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login endpoint
+    internalApiKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Api-Key
+      description: Internal service-to-service API key
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+
+    UserOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [user, admin]
+        created_at:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          default: bearer
+
+    PlayerProfileOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        external_id:
+          type: string
+        username:
+          type: string
+        wins:
+          type: integer
+        losses:
+          type: integer
+        rating:
+          type: integer
+
+    MatchSummaryOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        external_match_id:
+          type: string
+        player1_external_id:
+          type: string
+        player2_external_id:
+          type: string
+        winner_external_id:
+          type: string
+          nullable: true
+        player1_score:
+          type: integer
+        player2_score:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    Card:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+          enum: [Rock, Paper, Scissors]
+        power_level:
+          type: integer
+        rarity:
+          type: string
+          enum: [Common, Uncommon, Rare, Legendary]
+
+    CreateMatchResponse:
+      type: object
+      properties:
+        match_id:
+          type: string
+        player_id:
+          type: string
+        hand:
+          type: array
+          items:
+            $ref: '#/components/schemas/Card'
+        status:
+          type: string
+
+    MatchStateResponse:
+      type: object
+      properties:
+        match_id:
+          type: string
+        player1_id:
+          type: string
+        player2_id:
+          type: string
+        player1_hp:
+          type: integer
+        player2_hp:
+          type: integer
+        current_turn:
+          type: string
+        status:
+          type: string
+        round_number:
+          type: integer
+
+    MoveResultSchema:
+      type: object
+      properties:
+        status:
+          type: string
+        round_winner:
+          type: string
+          nullable: true
+        player1_hp:
+          type: integer
+        player2_hp:
+          type: integer
+        match_result:
+          type: string
+          nullable: true
+          enum: [player1_wins, player2_wins, draw]
 
 paths:
 
   ###############################################
-  # AUTH SERVICE (PORT 8001)
+  # AUTH SERVICE ENDPOINTS
   ###############################################
 
   /auth/register:
     post:
       summary: Register new user
       tags: [Auth]
+      operationId: register_user
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - username
+                - email
+                - password
               properties:
                 username:
                   type: string
+                  minLength: 3
+                  maxLength: 20
+                  pattern: '^[a-zA-Z0-9_-]+$'
+                  example: "player_123"
                 email:
                   type: string
+                  format: email
+                  example: "user@example.com"
                 password:
                   type: string
+                  minLength: 8
+                  example: "SecurePass123"
       responses:
         "201":
-          description: User registered
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOut'
+        "400":
+          description: Invalid input or user already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /auth/login:
     post:
-      summary: Login and obtain JWT
+      summary: Login and obtain JWT tokens
       tags: [Auth]
+      operationId: login_user
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - username
+                - password
               properties:
                 username:
                   type: string
@@ -58,118 +249,100 @@ paths:
                   type: string
       responses:
         "200":
-          description: JWT token returned
+          description: Successfully logged in
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-                  refresh_token:
-                    type: string
+                $ref: '#/components/schemas/TokenResponse'
+        "400":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /auth/refresh:
     post:
-      summary: Refresh JWT token
+      summary: Refresh access token using refresh token
       tags: [Auth]
+      operationId: refresh_access_token
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - refresh_token
               properties:
                 refresh_token:
                   type: string
       responses:
         "200":
-          description: New tokens returned
+          description: New access token issued
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-                  refresh_token:
-                    type: string
-
-  /auth/logout:
-    post:
-      summary: Logout and blacklist token
-      tags: [Auth]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                token:
-                  type: string
-      responses:
-        "200":
-          description: Logged out successfully
+                $ref: '#/components/schemas/TokenResponse'
+        "401":
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /auth/validate:
     get:
       summary: Validate JWT token
       tags: [Auth]
+      operationId: validate_token
       security:
         - bearerAuth: []
       responses:
         "200":
           description: Token is valid
-
-  /auth/health:
-    get:
-      summary: Health check
-      tags: [Auth]
-      responses:
-        "200":
-          description: Alive
-
-  ###############################################
-  # PLAYER SERVICE (PORT 8002)
-  ###############################################
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: integer
+                  username:
+                    type: string
+        "401":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /health:
     get:
-      summary: Health check
-      tags: [Player]
+      summary: Auth service health check
+      tags: [Auth]
+      operationId: auth_health
       responses:
         "200":
-          description: Service OK
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
 
-  /internal/players:
-    post:
-      summary: Sync player profile internally
-      tags: [Player]
-      security:
-        - internalApiKey: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                external_id:
-                  type: string
-                username:
-                  type: string
-                  nullable: true
-      responses:
-        "200":
-          description: Profile synced
-        "201":
-          description: Profile created
+  ###############################################
+  # PLAYER SERVICE ENDPOINTS
+  ###############################################
 
   /players:
     post:
-      summary: Create or update my profile
+      summary: Create or update player profile
       tags: [Player]
+      operationId: create_player_profile
       security:
         - bearerAuth: []
       requestBody:
@@ -183,27 +356,121 @@ paths:
                   type: string
                   nullable: true
       responses:
-        "200":
-          description: Profile updated
         "201":
-          description: Profile created
+          description: Player profile created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerProfileOut'
+        "200":
+          description: Player profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerProfileOut'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Player not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /players/me:
     get:
-      summary: Get my profile
+      summary: Get authenticated player's profile
       tags: [Player]
+      operationId: get_my_profile
       security:
         - bearerAuth: []
       responses:
         "200":
-          description: Profile
+          description: Current player's profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerProfileOut'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Player profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /players/{player_external_id}/matches:
+    get:
+      summary: Get match history for a player
+      tags: [Player]
+      operationId: list_player_matches
+      parameters:
+        - name: player_external_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Player's external ID (username)
+      responses:
+        "200":
+          description: List of player's matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MatchSummaryOut'
         "404":
           description: Player not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /players/{player_external_id}/matches/{match_id}:
+    get:
+      summary: Get detailed match information
+      tags: [Player]
+      operationId: get_match_detail
+      parameters:
+        - name: player_external_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: match_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Match details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchSummaryOut'
+        "404":
+          description: Match or player not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /matches:
     post:
-      summary: Create match record (for statistics)
+      summary: Record match result (Internal)
       tags: [Player]
+      operationId: create_match_record
       security:
         - internalApiKey: []
       requestBody:
@@ -232,11 +499,10 @@ paths:
                   type: integer
                 external_match_id:
                   type: string
-                  description: Idempotency key.
+                  description: Unique match identifier for idempotency
                 moves_log:
                   type: string
                   nullable: true
-                  description: Optional pre-formatted match moves log.
                 turns:
                   type: array
                   items:
@@ -254,56 +520,52 @@ paths:
       responses:
         "201":
           description: Match record created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Unauthorized (invalid API key)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
-  /players/{player_id}/matches:
+  /health:
     get:
-      summary: Player match history (public)
+      summary: Player service health check
       tags: [Player]
-      parameters:
-        - name: player_id
-          in: path
-          required: true
-          schema:
-            type: string
+      operationId: player_health
       responses:
         "200":
-          description: List of matches
-
-  /players/{player_id}/matches/{match_id}:
-    get:
-      summary: Get match details (public)
-      tags: [Player]
-      parameters:
-        - name: player_id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: match_id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Match details
-
-  /leaderboard:
-    get:
-      summary: Get leaderboard
-      tags: [Player]
-      responses:
-        "200":
-          description: Leaderboard list
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
 
   ###############################################
-  # GAME SERVICE (PORT 8003)
+  # GAME SERVICE ENDPOINTS
   ###############################################
 
   /matches:
     post:
-      summary: Create new match
+      summary: Create a new match
       tags: [Game]
+      operationId: create_match
       security:
         - bearerAuth: []
       requestBody:
@@ -318,31 +580,86 @@ paths:
               properties:
                 player1_id:
                   type: string
+                  description: Username of player 1 (must match authenticated user)
                 player2_id:
                   type: string
+                  description: Username of player 2 (opponent)
       responses:
         "200":
-          description: Match created
+          description: Match created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  match_id:
-                    type: string
-                  player_id:
-                    type: string
-                  hand:
-                    type: array
-                    items:
-                      type: object
-                  status:
-                    type: string
+                $ref: '#/components/schemas/CreateMatchResponse'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: Cannot create match as other player
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /matches/{match_id}:
+    get:
+      summary: Get match state for authenticated player
+      tags: [Game]
+      operationId: get_match_state
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: match_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: player_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Player ID (must match authenticated user)
+      responses:
+        "200":
+          description: Match state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchStateResponse'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: Cannot view other player's match state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Match not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /matches/{match_id}/move:
     post:
-      summary: Submit a card move
+      summary: Submit a card move in match
       tags: [Game]
+      operationId: submit_move
       security:
         - bearerAuth: []
       parameters:
@@ -363,100 +680,70 @@ paths:
               properties:
                 player_id:
                   type: string
+                  description: Player making the move (must match authenticated user)
                 card_index:
                   type: integer
+                  description: Index of card in player's hand (0-based)
       responses:
         "200":
-          description: Move accepted
+          description: Move executed
           content:
             application/json:
               schema:
                 oneOf:
+                  - $ref: '#/components/schemas/MoveResultSchema'
                   - type: object
                     properties:
                       status:
                         type: string
-                        enum: ["waiting_for_opponent"]
-                  - type: object
-                    properties:
-                      round:
-                        type: integer
-                      winner:
-                        type: string
-                        nullable: true
-                      reason:
-                        type: string
-                      points_p1:
-                        type: integer
-                      points_p2:
-                        type: integer
-                      match_finished:
-                        type: boolean
-                      match_winner:
-                        type: string
-                        nullable: true
-
-  /matches/{match_id}:
-    get:
-      summary: Get match state
-      tags: [Game]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: match_id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: player_id
-          in: query
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Match state retrieved
+                        example: "waiting_for_opponent"
+        "400":
+          description: Invalid move
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  match_id:
-                    type: string
-                  status:
-                    type: string
-                  player1_id:
-                    type: string
-                  player2_id:
-                    type: string
-                  current_round:
-                    type: integer
-                  player1_score:
-                    type: integer
-                  player2_score:
-                    type: integer
-                  winner:
-                    type: string
-                    nullable: true
-                  hand:
-                    type: array
-                    items:
-                      type: object
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: Cannot submit move for other player
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Match not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /matches/active:
     get:
-      summary: Get active matches for user
+      summary: Get all active matches for authenticated player
       tags: [Game]
+      operationId: get_active_matches
       security:
         - bearerAuth: []
       responses:
         "200":
           description: List of active matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MatchStateResponse'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /matches/{match_id}/surrender:
     post:
-      summary: Surrender match
+      summary: Surrender the match
       tags: [Game]
+      operationId: surrender_match
       security:
         - bearerAuth: []
       parameters:
@@ -468,23 +755,44 @@ paths:
       responses:
         "200":
           description: Match surrendered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchStateResponse'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Match not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /cards:
     get:
-      summary: Get deck gallery (SVG)
+      summary: Get deck gallery visualization (SVG)
       tags: [Game]
+      operationId: get_deck_gallery
+      description: Returns complete deck gallery as SVG showing all available cards in grid layout
       responses:
         "200":
-          description: SVG gallery
+          description: Deck gallery SVG
           content:
             image/svg+xml:
               schema:
                 type: string
+                format: binary
 
   /cards/{card_id}:
     get:
-      summary: Get card detail (SVG)
+      summary: Get card detail visualization (SVG)
       tags: [Game]
+      operationId: get_card_detail
+      description: Returns detailed card view as SVG with all statistics
       parameters:
         - name: card_id
           in: path
@@ -493,16 +801,25 @@ paths:
             type: integer
       responses:
         "200":
-          description: SVG card detail
+          description: Card detail SVG
           content:
             image/svg+xml:
               schema:
                 type: string
+                format: binary
+        "404":
+          description: Card not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /matches/{match_id}/hand:
     get:
-      summary: Get player hand (SVG)
+      summary: Get player's hand visualization (SVG)
       tags: [Game]
+      operationId: get_player_hand_visual
+      description: Returns player's current hand in match as SVG, showing available and used cards
       security:
         - bearerAuth: []
       parameters:
@@ -513,19 +830,49 @@ paths:
             type: string
       responses:
         "200":
-          description: SVG hand visualization
+          description: Player hand SVG
           content:
             image/svg+xml:
               schema:
                 type: string
+                format: binary
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Match or player not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-    internalApiKey:
-      type: apiKey
-      in: header
-      name: X-Internal-Api-Key
+  /health:
+    get:
+      summary: Game service health check
+      tags: [Game]
+      operationId: game_health
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+    description: User authentication and token management
+  - name: Player
+    description: Player profiles and match history
+  - name: Game
+    description: Game match creation and gameplay

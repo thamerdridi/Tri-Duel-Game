@@ -40,7 +40,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          docker compose exec -T game_service python -m pytest game_app/tests/unit/
+          docker compose exec -T game_service python -m pytest tests/
           docker compose exec -T player_service python -m pytest tests/
           docker compose exec -T auth_service python -m pytest tests/
 
