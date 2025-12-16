@@ -66,7 +66,7 @@ def test_post_match_requires_internal_api_key(client):
 
 def test_post_match_validation_error(client):
     from app import auth as auth_module
-    auth_module.PLAYER_INTERNAL_API_KEY = "test_key"
+    auth_module.PLAYER_SERVICE_API_KEY = "test_key"
 
     resp = client.post(
         "/matches",
@@ -83,7 +83,7 @@ def test_post_match_idempotent_and_history(client):
     client.post("/players", json={"username": "Bob"})
 
     from app import auth as auth_module
-    auth_module.PLAYER_INTERNAL_API_KEY = "test_key"
+    auth_module.PLAYER_SERVICE_API_KEY = "test_key"
 
     payload = {
         "player1_external_id": "alice",
@@ -152,7 +152,7 @@ def test_internal_sync_requires_api_key(client):
 
 def test_internal_sync_ok(client):
     from app import auth as auth_module
-    auth_module.PLAYER_INTERNAL_API_KEY = "test_key"
+    auth_module.PLAYER_SERVICE_API_KEY = "test_key"
 
     resp = client.post(
         "/internal/players",

@@ -105,7 +105,7 @@ def test_game_service_post_match_with_internal_api_key(client, monkeypatch):
     }
 
     from app import auth as auth_module
-    auth_module.PLAYER_INTERNAL_API_KEY = "test_key"
+    auth_module.PLAYER_SERVICE_API_KEY = "test_key"
 
     ok = client.post("/matches", headers={"X-Internal-Api-Key": "test_key"}, json=payload)
     assert ok.status_code == 201

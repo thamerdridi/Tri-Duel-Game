@@ -17,7 +17,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 if [ ! -f .env ]; then
-  echo "Missing .env in repo root. Create it from .env.example and set PLAYER_INTERNAL_API_KEY." >&2
+  echo "Missing .env in repo root. Create it from .env.example and set PLAYER_SERVICE_API_KEY." >&2
   exit 1
 fi
 
@@ -26,15 +26,15 @@ set -a
 source ./.env
 set +a
 
-if [ -z "${PLAYER_INTERNAL_API_KEY:-}" ]; then
+if [ -z "${PLAYER_SERVICE_API_KEY:-}" ]; then
   if command -v openssl >/dev/null 2>&1; then
-    PLAYER_INTERNAL_API_KEY="$(openssl rand -hex 16)"
+    PLAYER_SERVICE_API_KEY="$(openssl rand -hex 16)"
   else
-    PLAYER_INTERNAL_API_KEY="$(date +%s | sha256sum | awk '{print $1}' | head -c 32)"
+    PLAYER_SERVICE_API_KEY="$(date +%s | sha256sum | awk '{print $1}' | head -c 32)"
   fi
-  export PLAYER_INTERNAL_API_KEY
-  echo "PLAYER_INTERNAL_API_KEY is not set in .env; using a generated one for this run:" >&2
-  echo "PLAYER_INTERNAL_API_KEY=${PLAYER_INTERNAL_API_KEY}" >&2
+  export PLAYER_SERVICE_API_KEY
+  echo "PLAYER_SERVICE_API_KEY is not set in .env; using a generated one for this run:" >&2
+  echo "PLAYER_SERVICE_API_KEY=${PLAYER_SERVICE_API_KEY}" >&2
 fi
 
 COMPOSE_CMD="${COMPOSE_CMD:-docker compose}"
@@ -251,12 +251,12 @@ log "turns_count=${TURNS_COUNT}"
 
 echo "Ensuring profiles exist via internal sync (API-key protected)..."
 http POST "${PLAYER_BASE}/internal/players" \
-  -H "X-Internal-Api-Key: ${PLAYER_INTERNAL_API_KEY}" \
+  -H "X-Internal-Api-Key: ${PLAYER_SERVICE_API_KEY}" \
   -H 'Content-Type: application/json' \
   -d "{\"external_id\":\"${ALICE_USER}\",\"username\":\"${ALICE_USER}\"}" >/dev/null
 
 http POST "${PLAYER_BASE}/internal/players" \
-  -H "X-Internal-Api-Key: ${PLAYER_INTERNAL_API_KEY}" \
+  -H "X-Internal-Api-Key: ${PLAYER_SERVICE_API_KEY}" \
   -H 'Content-Type: application/json' \
   -d "{\"external_id\":\"${BOB_USER}\",\"username\":\"${BOB_USER}\"}" >/dev/null
 
@@ -284,7 +284,7 @@ log "posting match payload:"
 echo "$MATCH_PAYLOAD" | pretty_json
 
 http POST "${PLAYER_BASE}/matches" \
-  -H "X-Internal-Api-Key: ${PLAYER_INTERNAL_API_KEY}" \
+  -H "X-Internal-Api-Key: ${PLAYER_SERVICE_API_KEY}" \
   -H 'Content-Type: application/json' \
   -d "$MATCH_PAYLOAD" | tee /tmp/player_match_post.json | pretty_json
 

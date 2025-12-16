@@ -111,7 +111,7 @@ services:
     environment:
       AUTH_SERVICE_URL: "https://auth_service:8001"
       DATABASE_URL: "postgresql+psycopg2://player_user:player_password@player_postgres:5432/tri_duel_player"
-      PLAYER_INTERNAL_API_KEY: ${PLAYER_SERVICE_API_KEY}
+      PLAYER_SERVICE_API_KEY: ${PLAYER_SERVICE_API_KEY}
     volumes:
       - ./player_service:/app
       - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
@@ -144,7 +144,6 @@ services:
       AUTH_SERVICE_URL: "https://auth_service:8001"
       PLAYER_SERVICE_URL: "https://player_service:8002"
       SERVICE_API_KEY: ${PLAYER_SERVICE_API_KEY}
-      PLAYER_INTERNAL_API_KEY: ${PLAYER_SERVICE_API_KEY}
       CA_BUNDLE_PATH: "/certs/ca/ca.crt"
       DATABASE_URL: "postgresql+psycopg2://${GAME_DB_USER}:${GAME_DB_PASSWORD}@game_postgres:5432/${GAME_DB_NAME}"
     volumes:
