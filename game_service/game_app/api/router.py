@@ -149,7 +149,7 @@ def get_active_matches(
 
 
 @router.post("/matches/{match_id}/surrender", response_model=MatchStateResponse)
-def surrender_match(
+async def surrender_match(
     match_id: str,
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user)
