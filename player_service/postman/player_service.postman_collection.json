@@ -2,16 +2,16 @@
   "info": {
     "name": "Tri-Duel - Player Service (Postman Tests)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Unit-style API tests for Player Service (and Auth Service for tokens). Set collection variables `auth_base_url` and `player_base_url` to match your deployment. If using self-signed HTTPS, disable SSL verification in Postman."
+    "description": "Unit-style API tests for Player Service (and Auth Service for tokens). Set collection variables `auth_base_url` and `player_base_url` to match your deployment. For HTTPS with the project CA, import and trust `certs/ca/ca.crt` in Postman (or, for Newman, set `NODE_EXTRA_CA_CERTS=certs/ca/ca.crt`)."
   },
   "variable": [
-    { "key": "auth_base_url", "value": "http://localhost:8001" },
+    { "key": "auth_base_url", "value": "https://localhost:8001" },
     { "key": "player_base_url", "value": "https://localhost:8002" },
     { "key": "player1_username", "value": "player1" },
     { "key": "player2_username", "value": "player2" },
     { "key": "game_service_username", "value": "game_service" },
     { "key": "password", "value": "pass123" },
-    { "key": "player_internal_api_key", "value": "change_me" },
+    { "key": "PLAYER_SERVICE_API_KEY", "value": "change_me" },
     { "key": "player1_token", "value": "" },
     { "key": "player2_token", "value": "" },
     { "key": "game_service_token", "value": "" },
@@ -168,13 +168,13 @@
           "name": "Internal sync profile (valid)",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-Internal-Api-Key", "value": "{{player_internal_api_key}}" }
-            ],
-            "url": { "raw": "{{player_base_url}}/internal/players", "host": ["{{player_base_url}}"], "path": ["internal", "players"] },
-            "body": { "mode": "raw", "raw": "{\"external_id\":\"{{player1_username}}\",\"username\":\"{{player1_username}}\"}" }
-          },
+              "header": [
+                { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Api-Key", "value": "{{PLAYER_SERVICE_API_KEY}}" }
+              ],
+              "url": { "raw": "{{player_base_url}}/internal/players", "host": ["{{player_base_url}}"], "path": ["internal", "players"] },
+              "body": { "mode": "raw", "raw": "{\"external_id\":\"{{player1_username}}\",\"username\":\"{{player1_username}}\"}" }
+            },
           "event": [
             { "listen": "test", "script": { "exec": ["pm.test('Internal sync returns 200 or 201', function () { pm.expect([200,201]).to.include(pm.response.code); });"] } }
           ]
@@ -288,13 +288,13 @@
           "name": "Post match (valid - internal API key)",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-Internal-Api-Key", "value": "{{player_internal_api_key}}" }
-            ],
-            "url": { "raw": "{{player_base_url}}/matches", "host": ["{{player_base_url}}"], "path": ["matches"] },
-            "body": {
-              "mode": "raw",
+              "header": [
+                { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Api-Key", "value": "{{PLAYER_SERVICE_API_KEY}}" }
+              ],
+              "url": { "raw": "{{player_base_url}}/matches", "host": ["{{player_base_url}}"], "path": ["matches"] },
+              "body": {
+                "mode": "raw",
               "raw": "{\"player1_external_id\":\"{{player1_username}}\",\"player2_external_id\":\"{{player2_username}}\",\"winner_external_id\":\"{{player1_username}}\",\"player1_score\":3,\"player2_score\":2,\"external_match_id\":\"pm-match-1\",\"turns\":[{\"turn_number\":1,\"player1_card_name\":\"Rock 1\",\"player2_card_name\":\"Paper 2\",\"winner_external_id\":\"{{player2_username}}\"}]}"
             }
           },

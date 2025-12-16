@@ -124,3 +124,56 @@ def test_game_service_post_match_with_internal_api_key(client, monkeypatch):
     detail = client.get(f"/players/alice/matches/{match_id}")
     assert detail.status_code == 200
     assert detail.json()["turns"][0]["player1_card_name"] == "Rock 1"
+
+
+def test_auth_https_uses_ca_bundle_for_verification(monkeypatch, client, tmp_path):
+    from app import auth as auth_module
+
+    ca_path = tmp_path / "ca.crt"
+    ca_path.write_text("dummy")
+
+    monkeypatch.setattr(auth_module, "AUTH_SERVICE_URL", "https://auth.local")
+    monkeypatch.setattr(auth_module, "CA_BUNDLE_PATH", str(ca_path))
+
+    captured: dict[str, object] = {}
+    original_async_client = httpx.AsyncClient
+
+    class PatchedAsyncClient:
+        def __init__(self, *args, **kwargs):
+            captured["verify"] = kwargs.get("verify")
+            self._client = original_async_client(
+                transport=httpx.MockTransport(lambda request: httpx.Response(401, json={"detail": "nope"}))
+            )
+
+        async def __aenter__(self):
+            return self._client
+
+        async def __aexit__(self, exc_type, exc, tb):
+            await self._client.aclose()
+
+    monkeypatch.setattr(auth_module.httpx, "AsyncClient", PatchedAsyncClient)
+
+    resp = client.post(
+        "/players",
+        headers={"Authorization": "Bearer token"},
+        json={"username": "Alice"},
+    )
+    assert resp.status_code == 401
+    assert captured["verify"] == str(ca_path)
+
+
+def test_auth_https_missing_ca_bundle_returns_500(monkeypatch, client, tmp_path):
+    from app import auth as auth_module
+
+    missing_ca = tmp_path / "missing_ca.crt"
+
+    monkeypatch.setattr(auth_module, "AUTH_SERVICE_URL", "https://auth.local")
+    monkeypatch.setattr(auth_module, "CA_BUNDLE_PATH", str(missing_ca))
+
+    resp = client.post(
+        "/players",
+        headers={"Authorization": "Bearer token"},
+        json={"username": "Alice"},
+    )
+    assert resp.status_code == 500
+    assert "CA bundle not found" in resp.text
