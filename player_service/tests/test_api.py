@@ -24,9 +24,18 @@ def test_create_profile_requires_auth(client):
 
 
 def test_create_profile_ok(client):
+    from app import auth as auth_module
+    auth_module.PLAYER_SERVICE_API_KEY = "test_key"
+
+    client.post(
+        "/internal/players",
+        headers={"X-Internal-Api-Key": "test_key"},
+        json={"external_id": "alice", "username": "Initial"},
+    )
+
     set_user(client, "alice")
     resp = client.post("/players", json={"username": "Alice"})
-    assert resp.status_code == 201
+    assert resp.status_code == 200
     assert resp.json()["external_id"] == "alice"
     assert resp.json()["username"] == "Alice"
 
@@ -38,8 +47,16 @@ def test_get_my_profile_not_found(client):
 
 
 def test_get_my_profile_ok(client):
+    from app import auth as auth_module
+    auth_module.PLAYER_SERVICE_API_KEY = "test_key"
+
+    client.post(
+        "/internal/players",
+        headers={"X-Internal-Api-Key": "test_key"},
+        json={"external_id": "alice", "username": "Alice"},
+    )
+
     set_user(client, "alice")
-    client.post("/players", json={"username": "Alice"})
     resp = client.get("/players/me")
     assert resp.status_code == 200
     assert resp.json()["external_id"] == "alice"
@@ -77,13 +94,19 @@ def test_post_match_validation_error(client):
 
 
 def test_post_match_idempotent_and_history(client):
-    set_user(client, "alice")
-    client.post("/players", json={"username": "Alice"})
-    set_user(client, "bob")
-    client.post("/players", json={"username": "Bob"})
-
     from app import auth as auth_module
     auth_module.PLAYER_SERVICE_API_KEY = "test_key"
+
+    client.post(
+        "/internal/players",
+        headers={"X-Internal-Api-Key": "test_key"},
+        json={"external_id": "alice", "username": "Alice"},
+    )
+    client.post(
+        "/internal/players",
+        headers={"X-Internal-Api-Key": "test_key"},
+        json={"external_id": "bob", "username": "Bob"},
+    )
 
     payload = {
         "player1_external_id": "alice",
@@ -132,8 +155,14 @@ def test_post_match_idempotent_and_history(client):
 
 
 def test_get_match_detail_invalid_match(client):
-    set_user(client, "alice")
-    client.post("/players", json={"username": "Alice"})
+    from app import auth as auth_module
+    auth_module.PLAYER_SERVICE_API_KEY = "test_key"
+
+    client.post(
+        "/internal/players",
+        headers={"X-Internal-Api-Key": "test_key"},
+        json={"external_id": "alice", "username": "Alice"},
+    )
 
     resp = client.get("/players/alice/matches/999")
     assert resp.status_code == 404

@@ -86,6 +86,9 @@ services:
       ALGORITHM: "HS256"
       DATABASE_URL: "sqlite:///./auth.db"
       PLAYER_SERVICE_URL: "https://player_service:8002"
+      PLAYER_SERVICE_API_KEY: ${PLAYER_SERVICE_API_KEY}
+      CA_BUNDLE_PATH: "/certs/ca/ca.crt"
+    volumes:
       - ./auth_service:/app
       - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
       - ./certs/auth_service:/certs/auth_service:ro

@@ -14,12 +14,18 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     os.environ["TESTING"] = "1"
 
     service_root = Path(__file__).resolve().parents[1]
-    if str(service_root) not in sys.path:
-        sys.path.insert(0, str(service_root))
+    # Ensure the player_service package is first on sys.path so we don't
+    # accidentally import another sibling service's `app` package when running
+    # tests from the monorepo root.
+    sys.path = [str(service_root)] + [p for p in sys.path if p != str(service_root)]
+    for mod in list(sys.modules):
+        if mod == "app" or mod.startswith("app."):
+            sys.modules.pop(mod, None)
 
     from app import db as db_module
     from app.db import Base
     from app.main import app
+    import app.main as main_module
 
     engine = create_engine(
         "sqlite+pysqlite://",
@@ -34,6 +40,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
     monkeypatch.setattr(db_module, "engine", engine, raising=True)
     monkeypatch.setattr(db_module, "SessionLocal", TestingSessionLocal, raising=True)
+    monkeypatch.setattr(main_module, "engine", engine, raising=False)
 
     Base.metadata.create_all(bind=engine)
 
