@@ -74,15 +74,7 @@ async def create_player_profile(
     )
 
     if profile is None:
-        profile = PlayerProfile(
-            external_id=external_id,
-            username=payload.username or external_id,
-        )
-        db.add(profile)
-        db.commit()
-        db.refresh(profile)
-        response.status_code = 201
-        return profile
+        raise HTTPException(status_code=404, detail="Player not found")
 
     updated = False
     if payload.username is not None:

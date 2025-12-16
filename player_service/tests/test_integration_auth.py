@@ -40,12 +40,20 @@ def test_profile_flow_uses_auth_validate(client, monkeypatch):
         },
     )
 
+    from app import auth as auth_module
+    auth_module.PLAYER_SERVICE_API_KEY = "test_key"
+    client.post(
+        "/internal/players",
+        headers={"X-Internal-Api-Key": "test_key"},
+        json={"external_id": "alice", "username": "Initial"},
+    )
+
     resp = client.post(
         "/players",
         headers={"Authorization": "Bearer alice_token"},
         json={"username": "Alice"},
     )
-    assert resp.status_code == 201
+    assert resp.status_code == 200
     assert resp.json()["external_id"] == "alice"
 
     me = client.get("/players/me", headers={"Authorization": "Bearer alice_token"})
@@ -76,15 +84,18 @@ def test_game_service_post_match_with_internal_api_key(client, monkeypatch):
         },
     )
 
+    from app import auth as auth_module
+    auth_module.PLAYER_SERVICE_API_KEY = "test_key"
+
     client.post(
-        "/players",
-        headers={"Authorization": "Bearer alice_token"},
-        json={"username": "Alice"},
+        "/internal/players",
+        headers={"X-Internal-Api-Key": "test_key"},
+        json={"external_id": "alice", "username": "Alice"},
     )
     client.post(
-        "/players",
-        headers={"Authorization": "Bearer bob_token"},
-        json={"username": "Bob"},
+        "/internal/players",
+        headers={"X-Internal-Api-Key": "test_key"},
+        json={"external_id": "bob", "username": "Bob"},
     )
 
     payload = {
@@ -103,9 +114,6 @@ def test_game_service_post_match_with_internal_api_key(client, monkeypatch):
             }
         ],
     }
-
-    from app import auth as auth_module
-    auth_module.PLAYER_SERVICE_API_KEY = "test_key"
 
     ok = client.post("/matches", headers={"X-Internal-Api-Key": "test_key"}, json=payload)
     assert ok.status_code == 201

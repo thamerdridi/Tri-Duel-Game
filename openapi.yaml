@@ -90,7 +90,7 @@ paths:
 
   /players:
     post:
-      summary: Create or update my profile
+      summary: Update my profile
       tags: [Player]
       security:
         - bearerAuth: []
@@ -107,8 +107,8 @@ paths:
       responses:
         "200":
           description: Profile updated
-        "201":
-          description: Profile created
+        "404":
+          description: Player not found
 
   /players/me:
     get:
