@@ -85,7 +85,7 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: ${TOKEN_EXPIRE_MINUTES:-60}
       ALGORITHM: "HS256"
       DATABASE_URL: "sqlite:///./auth.db"
-    volumes:
+      PLAYER_SERVICE_URL: "https://player_service:8002"
       - ./auth_service:/app
       - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
       - ./certs/auth_service:/certs/auth_service:ro

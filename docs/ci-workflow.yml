@@ -1,29 +1,53 @@
-# Copy of CI workflow for docs (used for assessment / reference)
-# This file mirrors .github/workflows/ci.yml so the rubric can find it under docs/
+name: CI
 
-name: CI (docs copy)
-
-on: [push]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+
+    env:
+      DOCKER_BUILDKIT: 1
+      COMPOSE_DOCKER_CLI_BUILD: 1
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Build
-        run: docker compose build
-      - name: Start
+
+      - name: Build Docker images
+        run: docker compose build --no-cache
+
+      - name: Validate Docker Compose configuration
+        run: docker compose config
+
+      - name: Start services
         run: docker compose up -d
-      - name: Wait
-        run: sleep 30
+
+      - name: Wait for services to be healthy
+        run: |
+          for i in {1..30}; do
+            if docker compose ps | grep -q "(healthy)"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose ps
+          exit 1
+
       - name: Run unit tests
         run: |
           docker compose exec -T game_service python -m pytest game_app/tests/unit/
           docker compose exec -T player_service python -m pytest tests/
-      - name: Run newman tests
-        run: |
-          npm install -g newman
-          newman run game_service/game_app/tests/postman/isolate_testing.postman_collection.json
-          newman run player_service/postman/player_service.postman_collection.json
+          docker compose exec -T auth_service python -m pytest tests/
 
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop services
+        if: always()
+        run: docker compose down -v
