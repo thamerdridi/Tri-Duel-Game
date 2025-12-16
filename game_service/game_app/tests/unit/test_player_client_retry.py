@@ -69,6 +69,7 @@ import pytest
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch, call
 import httpx
+import os
 
 from game_app.clients.player_client import PlayerClient
 from game_app.configs.client_config import (
@@ -78,6 +79,23 @@ from game_app.configs.client_config import (
     PLAYER_SERVICE_URL,
     PLAYER_ENDPOINTS,
 )
+
+# Patch the player_client module to use a temporary/mock CA bundle during tests
+import game_app.clients.player_client as player_client_module
+
+
+@pytest.fixture(autouse=True)
+def mock_ca_bundle(tmp_path, monkeypatch):
+    """Create a temporary fake CA bundle and patch the CA_BUNDLE_PATH used by PlayerClient.
+
+    This ensures PlayerClient.__init__ finds a file at the expected path and does not
+    raise RuntimeError when tests run in environments without mounted certs.
+    """
+    ca_file = tmp_path / "ca.crt"
+    ca_file.write_text("-----BEGIN CERTIFICATE-----\nFAKE-CA\n-----END CERTIFICATE-----")
+    monkeypatch.setattr(player_client_module, "CA_BUNDLE_PATH", str(ca_file))
+    # Ensure the module-level verify will point to the temp file when PlayerClient is created
+    return str(ca_file)
 
 
 # ============================================================

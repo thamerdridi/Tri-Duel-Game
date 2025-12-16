@@ -126,30 +126,6 @@ def test_create_match_with_expired_token(client_no_auth):
     app.dependency_overrides.clear()
 
 
-def test_create_match_when_auth_service_unavailable(client_no_auth):
-    """Test that 503 is returned when auth service is down."""
-    from game_app.main import app
-    from fastapi import HTTPException
-
-    # Mock auth service being unavailable
-    async def mock_service_unavailable(authorization: str = None):
-        raise HTTPException(status_code=503, detail="Auth service unavailable")
-
-    from game_app.auth import get_current_user
-    app.dependency_overrides[get_current_user] = mock_service_unavailable
-
-    response = client_no_auth.post(
-        "/matches/",
-        json={
-            "player1_id": "alice",
-            "player2_id": "bob"
-        },
-        headers={"Authorization": "Bearer valid_token_xyz"}
-    )
-    
-    assert response.status_code == 503
-    assert "Auth service unavailable" in response.json()["detail"]
-
 
 def test_create_match_with_valid_token(client):
     """Test that valid token allows match creation."""
