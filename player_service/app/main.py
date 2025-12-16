@@ -1,36 +1,38 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .db import Base, engine
 from .routers import players, matches
 
 
-app = FastAPI(
-    title="Tri-Duel Player Service",
-    version="0.1.0",
-)
-
-
-@app.on_event("startup")
-def on_startup() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     import os
     import time
     from sqlalchemy.exc import OperationalError
 
-    if os.getenv("TESTING"):
-        return
+    if not os.getenv("TESTING"):
+        # Docker/Postgres can be "healthy" but still not immediately reachable from other containers.
+        # Retry a few times instead of crashing the container.
+        last_error: Exception | None = None
+        for _ in range(30):
+            try:
+                Base.metadata.create_all(bind=engine)
+                break
+            except OperationalError as e:
+                last_error = e
+                time.sleep(1)
+        else:
+            raise last_error or RuntimeError("Database not reachable")
 
-    # Docker/Postgres can be "healthy" but still not immediately reachable from other containers.
-    # Retry a few times instead of crashing the container.
-    last_error: Exception | None = None
-    for _ in range(30):
-        try:
-            Base.metadata.create_all(bind=engine)
-            return
-        except OperationalError as e:
-            last_error = e
-            time.sleep(1)
+    yield
 
-    raise last_error or RuntimeError("Database not reachable")
+
+app = FastAPI(
+    title="Tri-Duel Player Service",
+    version="0.1.0",
+    lifespan=lifespan,
+)
 
 
 @app.get("/health")

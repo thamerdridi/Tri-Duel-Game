@@ -30,7 +30,7 @@ COPY --chown=app:app app/ ./app/
 # Prepare directories for TLS cert bind mounts
 # (must exist before Docker mounts volumes)
 # ------------------------------------------------------------
-RUN mkdir -p /certs/ca /certs/player
+RUN mkdir -p /certs/ca /certs/player_service
 
 # ------------------------------------------------------------
 # Switch to non-root user

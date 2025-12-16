@@ -16,11 +16,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8002
 
 ```bash
 cd player_service
+../certs/generate-certs.sh
 docker compose up --build
 ```
 
 - Base URL: `https://localhost:8002`
 - Reset DB (dev): `docker compose down -v`
+- Required env: `PLAYER_SERVICE_API_KEY` (in `../.env` or exported in your shell)
 
 ## Endpoints
 

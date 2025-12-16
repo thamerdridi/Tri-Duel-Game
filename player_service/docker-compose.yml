@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
@@ -18,19 +16,55 @@ services:
       timeout: 5s
       retries: 5
 
+  auth_service:
+    build:
+      context: ../auth_service
+      dockerfile: Dockerfile
+    container_name: player_service_auth
+    env_file:
+      - ../.env
+    environment:
+      SECRET_KEY: ${AUTH_SECRET_KEY:-change-me}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${TOKEN_EXPIRE_MINUTES:-60}
+      ALGORITHM: "HS256"
+      DATABASE_URL: "sqlite:///./auth.db"
+    ports:
+      - "8001:8001"
+    volumes:
+      - ../certs/ca/ca.crt:/certs/ca/ca.crt:ro
+      - ../certs/auth_service:/certs/auth_service:ro
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--cacert", "/certs/ca/ca.crt", "https://localhost:8001/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   player_service:
     build: .
     container_name: player_service
+    env_file:
+      - ../.env
     environment:
       DATABASE_URL: "postgresql+psycopg2://user:password@postgres:5432/tri_duel_player"
-      ENABLE_TLS: "1"
-      APP_PORT: "8002"
+      AUTH_SERVICE_URL: "https://auth_service:8001"
+      CA_BUNDLE_PATH: "/certs/ca/ca.crt"
+      PLAYER_SERVICE_API_KEY: ${PLAYER_SERVICE_API_KEY:-change_me}
     ports:
       - "8002:8002"
+    volumes:
+      - ../certs/ca/ca.crt:/certs/ca/ca.crt:ro
+      - ../certs/player_service:/certs/player_service:ro
     depends_on:
       postgres:
         condition: service_healthy
+      auth_service:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--cacert", "/certs/ca/ca.crt", "https://localhost:8002/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
