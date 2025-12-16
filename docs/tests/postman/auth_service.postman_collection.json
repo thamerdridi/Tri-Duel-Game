@@ -1,0 +1,61 @@
+{
+  "info": {
+    "name": "Tri-Duel Auth Service Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Register User",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "https://localhost/auth/register",
+          "protocol": "https",
+          "host": ["localhost"],
+          "path": ["auth", "register"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"testuser@test.com\",\n  \"password\": \"StrongPass123!\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Login User",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "https://localhost/auth/login",
+          "protocol": "https",
+          "host": ["localhost"],
+          "path": ["auth", "login"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"StrongPass123!\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Validate Token",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://localhost/auth/validate?token={{access_token}}",
+          "protocol": "https",
+          "host": ["localhost"],
+          "path": ["auth", "validate"],
+          "query": [
+            { "key": "token", "value": "{{access_token}}" }
+          ]
+        }
+      }
+    }
+  ]
+}

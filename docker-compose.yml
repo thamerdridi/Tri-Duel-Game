@@ -143,3 +143,20 @@ networks:
 volumes:
   game_postgres_data:
     driver: local
+
+
+locust_auth:
+  image: locustio/locust:2.31.5
+  container_name: triduel_locust_auth
+  volumes:
+    - ./docs/tests/locust:/mnt/locust
+  command: >
+    -f /mnt/locust/locustfile_auth.py
+    --host=https://auth_service:8001
+  ports:
+    - "8089:8089"
+  depends_on:
+    auth_service:
+      condition: service_healthy
+  networks:
+      - triduel_network

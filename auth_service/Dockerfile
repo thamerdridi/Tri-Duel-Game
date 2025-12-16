@@ -1,26 +1,30 @@
 FROM python:3.11-slim
 
-# ==========================
-# SECURITY: NON-ROOT USER
-# ==========================
-RUN useradd -m authuser
+# Create non-root user
+RUN addgroup --system appgroup && adduser --system appuser --ingroup appgroup
 
 WORKDIR /app
 
-# System deps
+# Install system dependencies (cryptography needs these)
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libssl-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Python dependencies
 COPY requirements.txt .
+
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy application code
 COPY . .
 
-# Ownership
-RUN chown -R authuser:authuser /app
+# Set permissions
+RUN chown -R appuser:appgroup /app
 
-USER authuser
+# Switch to non-root
+USER appuser
 
 EXPOSE 8001
 

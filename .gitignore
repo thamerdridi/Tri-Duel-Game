@@ -1,1 +1,46 @@
+# IDE
 .idea
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Environment variables & Secrets
+.env
+.env.local
+.secrets
+**/.secrets
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.db
+test.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# keys
+FERNET_KEY=idNYBr3t4Gf3V9qwgZMDvpazhnE8o7MwnRsof0O8BVU=
+JWT_PRIVATE_KEY_PATH=/app/keys/private.pem
+JWT_PUBLIC_KEY_PATH=/app/keys/public.pem
+
+__pycache__/
+*.pyc
+*.pyo
+*.db
+.pytest_cache/
+.env
+
