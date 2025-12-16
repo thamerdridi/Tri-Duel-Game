@@ -40,7 +40,7 @@ async def proxy(request: Request, target_url: str, path: str):
 
 @app.api_route("/auth/{path:path}", methods=["GET","POST","PUT","DELETE"])
 async def auth_proxy(request: Request, path: str):
-    return await proxy(request, AUTH_URL, path)
+    return await proxy(request, AUTH_URL, f"auth/{path}")
 
 @app.api_route("/player/{path:path}", methods=["GET","POST","PUT","DELETE"])
 async def player_proxy(request: Request, path: str):
