@@ -172,6 +172,18 @@ components:
           nullable: true
           enum: [player1_wins, player2_wins, draw]
 
+    LeaderboardEntry:
+      type: object
+      properties:
+        external_id:
+          type: string
+        username:
+          type: string
+        wins:
+          type: integer
+        matches:
+          type: integer
+
 paths:
 
   ###############################################
@@ -317,7 +329,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /health:
+  /auth/health:
     get:
       summary: Auth service health check
       tags: [Auth]
@@ -338,7 +350,7 @@ paths:
   # PLAYER SERVICE ENDPOINTS
   ###############################################
 
-  /players:
+  /player/players:
     post:
       summary: Create or update player profile
       tags: [Player]
@@ -381,7 +393,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /players/me:
+  /player/players/me:
     get:
       summary: Get authenticated player's profile
       tags: [Player]
@@ -408,7 +420,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /players/{player_external_id}/matches:
+  /player/players/{player_external_id}/matches:
     get:
       summary: Get match history for a player
       tags: [Player]
@@ -436,7 +448,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /players/{player_external_id}/matches/{match_id}:
+  /player/players/{player_external_id}/matches/{match_id}:
     get:
       summary: Get detailed match information
       tags: [Player]
@@ -466,7 +478,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /matches:
+  /player/matches:
     post:
       summary: Record match result (Internal)
       tags: [Player]
@@ -540,7 +552,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /health:
+  /player/leaderboard:
+    get:
+      summary: Get global leaderboard
+      tags: [Player]
+      operationId: get_leaderboard
+      description: Returns sorted list of players by wins and matches played
+      responses:
+        "200":
+          description: Leaderboard list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntry'
+
+  /player/health:
     get:
       summary: Player service health check
       tags: [Player]
@@ -561,7 +589,7 @@ paths:
   # GAME SERVICE ENDPOINTS
   ###############################################
 
-  /matches:
+  /game/matches:
     post:
       summary: Create a new match
       tags: [Game]
@@ -610,7 +638,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /matches/{match_id}:
+  /game/matches/{match_id}:
     get:
       summary: Get match state for authenticated player
       tags: [Game]
@@ -655,7 +683,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /matches/{match_id}/move:
+  /game/matches/{match_id}/move:
     post:
       summary: Submit a card move in match
       tags: [Game]
@@ -716,7 +744,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /matches/active:
+  /game/matches/active:
     get:
       summary: Get all active matches for authenticated player
       tags: [Game]
@@ -739,7 +767,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /matches/{match_id}/surrender:
+  /game/matches/{match_id}/surrender:
     post:
       summary: Surrender the match
       tags: [Game]
@@ -814,7 +842,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /matches/{match_id}/hand:
+  /game/matches/{match_id}/hand:
     get:
       summary: Get player's hand visualization (SVG)
       tags: [Game]
@@ -849,7 +877,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /health:
+  /game/health:
     get:
       summary: Game service health check
       tags: [Game]

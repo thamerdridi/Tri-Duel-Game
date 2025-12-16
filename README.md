@@ -4,6 +4,22 @@ A rock-paper-scissors card game with three microservices: Auth, Player, and Game
 
 Authors: Michal Sachanbinski, Othman Alhammali Shoaib Alhadiri, Thamer DRIDI - (Group 5).
 
+## Setup
+
+Before running the application, prepare the environment:
+
+1. Copy the environment file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Generate SSL certificates for secure communication:
+   ```bash
+   ./certs/generate-certs.sh
+   ```
+
+This sets up the necessary certificates for HTTPS communication between services and the API Gateway.
+
 ## Instructions
 
 To run and test the complete application:
@@ -18,10 +34,12 @@ All services, databases, and dependencies are containerized.
 ## Architecture
 
 ```
-Auth Service (8001) → JWT tokens → Player Service (8002)
-                                 → Game Service (8003)
+API Gateway (8443) → Auth Service (8001)
+                   → Player Service (8002)
+                   → Game Service (8003)
 ```
 
+- **API Gateway**: Routes requests to appropriate services, handles HTTPS
 - **Auth**: User registration, login, token validation
 - **Player**: Profiles, match history, leaderboard  
 - **Game**: Match logic, RPS engine, rounds
@@ -67,12 +85,12 @@ curl http://localhost:8003/        # Game Service - Should return {"status":"ok"
 
 ```bash
 # Register player 1
-curl -X POST http://localhost:8001/auth/register \
+curl -X POST https://localhost:8443/auth/register \
   -H "Content-Type: application/json" \
   -d '{"username": "player1", "email": "player1@test.com", "password": "pass123"}'
 
 # Register player 2
-curl -X POST http://localhost:8001/auth/register \
+curl -X POST https://localhost:8443/auth/register \
   -H "Content-Type: application/json" \
   -d '{"username": "player2", "email": "player2@test.com", "password": "pass456"}'
 ```
@@ -80,26 +98,18 @@ curl -X POST http://localhost:8001/auth/register \
 ### Step 2: Login as Player 1 (Get JWT Token)
 
 ```bash
-curl -X POST http://localhost:8001/auth/login \
+curl -X POST https://localhost:8443/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username": "player1", "password": "pass123"}'
 ```
 
 Copy the `access_token` from the response.
 
-### Step 2.1: Create Player Service Profile (once per user)
-
-```bash
-curl -X POST http://localhost:8002/players \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  -H "Content-Type: application/json" \
-  -d '{"username": "player1"}'
-```
 
 ### Step 3: View Available Cards
 
 ```bash
-curl http://localhost:8003/cards
+curl https://localhost:8443/cards
 ```
 
 This endpoint returns an SVG. Open it in a browser for the full deck view, and use `/cards/{id}` for single-card view.
@@ -107,7 +117,7 @@ This endpoint returns an SVG. Open it in a browser for the full deck view, and u
 ### Step 4: Start a Match
 
 ```bash
-curl -X POST http://localhost:8003/matches/ \
+curl -X POST https://localhost:8443/matches/ \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -124,7 +134,7 @@ Players take turns playing cards. Use the `match_card_id` from your hand (not th
 
 ```bash
 # Player 1 plays a card
-curl -X POST http://localhost:8003/matches/MATCH_ID_HERE/move \
+curl -X POST https://localhost:8443/matches/MATCH_ID_HERE/move \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -133,7 +143,7 @@ curl -X POST http://localhost:8003/matches/MATCH_ID_HERE/move \
   }'
 
 # Player 2 plays a card (round completes and shows result)
-curl -X POST http://localhost:8003/matches/MATCH_ID_HERE/move \
+curl -X POST https://localhost:8443/matches/MATCH_ID_HERE/move \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -148,7 +158,7 @@ curl -X POST http://localhost:8003/matches/MATCH_ID_HERE/move \
 
 ```bash
 # Get match state from Game Service
-curl "http://localhost:8003/matches/MATCH_ID_HERE?player_id=player1" \
+curl "https://localhost:8443/matches/MATCH_ID_HERE?player_id=player1" \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 
@@ -158,7 +168,7 @@ After a match completes, record it in the Player Service for leaderboard trackin
 
 ```bash
 # Manually submit match result to Player Service
-curl -X POST http://localhost:8002/matches \
+curl -X POST https://localhost:8443/matches \
   -H "X-Internal-Api-Key: PLAYER_INTERNAL_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -178,10 +188,10 @@ curl -X POST http://localhost:8002/matches \
 
 ```bash
 # View player match history
-curl http://localhost:8002/players/player1/matches
+curl https://localhost:8443/players/player1/matches
 
 # Check global leaderboard (public endpoint)
-curl http://localhost:8002/leaderboard
+curl https://localhost:8443/leaderboard
 ```
 
 ## Game Rules
