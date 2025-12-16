@@ -8,8 +8,8 @@
 *.key
 *.csr
 *.crt
-# BUT allow public CA certificate (DEV)
-!certs/ca/ca.crt
+/certs
+!/certs/generate-certs.sh
 
 # Python
 __pycache__/

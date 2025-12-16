@@ -34,4 +34,4 @@ USER gameuser
 EXPOSE 8003
 
 # Run the application (single-line JSON form to avoid parser issues)
-CMD ["uvicorn","game_app.main:app","--host","0.0.0.0","--port","8003","--ssl-certfile","/certs/game/game.crt","--ssl-keyfile","/certs/game/game.key"]
+CMD ["uvicorn","game_app.main:app","--host","0.0.0.0","--port","8003","--ssl-certfile","/certs/game_service/game_service.crt","--ssl-keyfile","/certs/game_service/game_service.key"]

@@ -45,4 +45,4 @@ EXPOSE 8002
 # ------------------------------------------------------------
 # Run application with HTTPS (TLS always enabled)
 # ------------------------------------------------------------
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002", "--ssl-certfile", "/certs/player/player.crt", "--ssl-keyfile", "/certs/player/player.key"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002", "--ssl-certfile", "/certs/player_service/player_service.crt", "--ssl-keyfile", "/certs/player_service/player_service.key"]

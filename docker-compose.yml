@@ -45,6 +45,32 @@ services:
     restart: unless-stopped
 
   # ============================================================
+  # API GATEWAY - HTTPS :8443
+  # ============================================================
+  gateway:
+    build: ./gateway
+    container_name: api_gateway
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./certs/ca/ca.crt:/certs/ca.crt:ro
+      - ./certs/gateway:/certs/gateway:ro
+    environment:
+      AUTH_SERVICE_URL: "https://auth_service:8001"
+      PLAYER_SERVICE_URL: "https://player_service:8002"
+      GAME_SERVICE_URL: "https://game_service:8003"
+
+    networks:
+      - triduel_network
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--cacert", "/certs/ca.crt", "https://localhost:8443/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+
+
+  # ============================================================
   # AUTH SERVICE - HTTPS :8001
   # ============================================================
   auth_service:
@@ -52,8 +78,8 @@ services:
       context: ./auth_service
       dockerfile: Dockerfile
     container_name: triduel_auth
-    ports:
-      - "8001:8001"
+#    ports:
+#      - "8001:8001"
     environment:
       SECRET_KEY: ${AUTH_SECRET_KEY:-change-me}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${TOKEN_EXPIRE_MINUTES:-60}
@@ -62,16 +88,15 @@ services:
     volumes:
       - ./auth_service:/app
       - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
-      - ./certs/auth:/certs/auth:ro
+      - ./certs/auth_service:/certs/auth_service:ro
     networks:
       - triduel_network
     healthcheck:
-      test:
-        ["CMD", "curl", "--cacert", "/certs/ca/ca.crt", "--resolve", "auth_service:8001:127.0.0.1", "https://auth_service:8001/health"]
-
+      test: [ "CMD", "curl", "--fail", "--cacert", "/certs/ca/ca.crt", "https://localhost:8001/health" ]
       interval: 10s
       timeout: 5s
       retries: 3
+
 
   # ============================================================
   # PLAYER SERVICE - HTTPS :8002
@@ -81,8 +106,8 @@ services:
       context: ./player_service
       dockerfile: Dockerfile
     container_name: triduel_player
-    ports:
-      - "8002:8002"
+#    ports:
+#      - "8002:8002"
     environment:
       AUTH_SERVICE_URL: "https://auth_service:8001"
       DATABASE_URL: "postgresql+psycopg2://player_user:player_password@player_postgres:5432/tri_duel_player"
@@ -90,7 +115,7 @@ services:
     volumes:
       - ./player_service:/app
       - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
-      - ./certs/player:/certs/player:ro
+      - ./certs/player_service:/certs/player_service:ro
     depends_on:
       auth_service:
         condition: service_healthy
@@ -99,12 +124,11 @@ services:
     networks:
       - triduel_network
     healthcheck:
-      test:
-        ["CMD", "curl", "--cacert", "/certs/ca/ca.crt", "--resolve", "player_service:8002:127.0.0.1", "https://player_service:8002/health"]
-
+      test: [ "CMD", "curl", "--fail", "--cacert", "/certs/ca/ca.crt", "https://localhost:8002/health" ]
       interval: 10s
       timeout: 5s
       retries: 3
+
 
   # ============================================================
   # GAME SERVICE - HTTPS :8003
@@ -114,8 +138,8 @@ services:
       context: ./game_service
       dockerfile: Dockerfile
     container_name: triduel_game
-    ports:
-      - "8003:8003"
+#    ports:
+#      - "8003:8003"
     environment:
       AUTH_SERVICE_URL: "https://auth_service:8001"
       PLAYER_SERVICE_URL: "https://player_service:8002"
@@ -126,7 +150,7 @@ services:
     volumes:
       - ./game_service:/app
       - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
-      - ./certs/game:/certs/game:ro
+      - ./certs/game_service:/certs/game_service:ro
     depends_on:
       auth_service:
         condition: service_healthy
@@ -138,12 +162,11 @@ services:
       - triduel_network
       - game_internal
     healthcheck:
-      test:
-        ["CMD", "curl", "--cacert", "/certs/ca/ca.crt", "--resolve", "game_service:8003:127.0.0.1", "https://game_service:8003/health"]
-
+      test: [ "CMD", "curl", "--fail", "--cacert", "/certs/ca/ca.crt", "https://localhost:8003/health" ]
       interval: 10s
       timeout: 5s
       retries: 3
+
 
 # ============================================================
 # NETWORKS

@@ -9,7 +9,7 @@ CERTS_DIR="$(cd "$(dirname "$0")" && pwd)"
 CA_DIR="$CERTS_DIR/ca"
 
 # MUST match directory names: certs/auth, certs/player, certs/game
-SERVICES=("auth" "player" "game")
+SERVICES=("auth_service" "player_service" "game_service" "gateway")
 
 DAYS_CA=3650
 DAYS_CERT=365
@@ -45,7 +45,7 @@ if [[ ! -f "$CA_KEY" || ! -f "$CA_CERT" ]]; then
     -sha256 \
     -days "$DAYS_CA" \
     -out "$CA_CERT" \
-    -subj "/CN=internal-ca"
+    -subj "//CN=internal-ca"
 
   log "CA generated"
 else

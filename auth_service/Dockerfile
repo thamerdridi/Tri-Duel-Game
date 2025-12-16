@@ -35,4 +35,4 @@ EXPOSE 8001
 # ------------------------------------------------------------
 # Run with TLS
 # ------------------------------------------------------------
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--ssl-certfile", "/certs/auth/auth.crt", "--ssl-keyfile", "/certs/auth/auth.key"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--ssl-certfile", "/certs/auth_service/auth_service.crt", "--ssl-keyfile", "/certs/auth_service/auth_service.key"]
