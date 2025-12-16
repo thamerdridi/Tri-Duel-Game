@@ -1,9 +1,13 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, SmallInteger
 from sqlalchemy.orm import relationship
 
 from .db import Base
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
 
 
 class PlayerProfile(Base):
@@ -12,7 +16,7 @@ class PlayerProfile(Base):
     id = Column(Integer, primary_key=True, index=True)
     external_id = Column(String(64), unique=True, index=True, nullable=False)
     username = Column(String(50), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 
 class Match(Base):
@@ -28,7 +32,7 @@ class Match(Base):
     player1_score = Column(SmallInteger, default=0, nullable=False)
     player2_score = Column(SmallInteger, default=0, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     turns = relationship(
         "MatchTurn",
@@ -51,6 +55,6 @@ class MatchTurn(Base):
 
     winner_id = Column(Integer, ForeignKey("player_profiles.id"), nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     match = relationship("Match", back_populates="turns")
